@@ -162,9 +162,41 @@
             placeholder="请输入活动描述"
           />
         </el-form-item>
-        <el-form-item label="图片URL" prop="image">
-          <el-input v-model="activityForm.image" placeholder="请输入图片URL" />
+
+        <el-form-item label="活动图片" prop="image">
+          <!-- 上传按钮 -->
+          <el-upload
+            class="simple-upload"
+            action="#"
+            :http-request="handleUpload"
+            :before-upload="beforeUpload"
+            :auto-upload="true"
+            :show-file-list="false"
+          >
+            <el-button type="primary" icon="el-icon-upload">选择图片</el-button>
+          </el-upload>
+
+          <!-- 上传成功后显示预览图 -->
+          <el-image
+            v-if="activityForm.image"
+            :src="activityForm.image"
+            style="
+              width: 80px;
+              height: 60px;
+              margin-top: 10px;
+              border-radius: 4px;
+            "
+            :preview-src-list="[activityForm.image]"
+          />
+
+          <!-- 隐藏的输入框（用于表单校验，绑定图片地址） -->
+          <el-input
+            v-model="activityForm.image"
+            placeholder="图片地址（上传后自动填充）"
+            style="display: none"
+          />
         </el-form-item>
+
         <el-form-item label="结束时间" prop="endTime">
           <el-date-picker
             v-model="activityForm.endTime"
@@ -279,8 +311,9 @@ import {
   deleteActivity,
 } from "@/api/activity";
 
+import { uploadFile } from "@/api/upload";
+
 export default {
-  name: "ActivityManagement",
   data() {
     return {
       // 查询参数
@@ -347,6 +380,32 @@ export default {
     this.getList();
   },
   methods: {
+    // 1. 上传前校验（可选：限制图片类型和大小，避免无效上传）
+    beforeUpload(file) {
+      const isImage = file.type.startsWith("image/");
+      const isLt2M = file.size / 1024 / 1024 < 2; // 限制2MB内
+      if (!isImage) this.$message.error("只能上传图片文件！");
+      if (!isLt2M) this.$message.error("图片大小不能超过2MB！");
+      return isImage && isLt2M; // 校验通过才允许上传
+    },
+
+    // 2. 核心上传逻辑：调用接口，返回地址填入表单
+    async handleUpload(options) {
+      try {
+        // 调用你的 uploadFile 接口上传文件
+        const res = await uploadFile(options.file);
+        // 假设接口返回格式：{ code: 0, data: "https://xxx.com/xxx.jpg" }
+        if (res.code === 0 && res.data) {
+          this.activityForm.image = res.data; // 直接填入图片地址
+          this.$message.success("图片上传成功！");
+        } else {
+          this.$message.error("上传失败：" + (res.msg || "未知错误"));
+        }
+      } catch (err) {
+        this.$message.error("上传失败：" + err.message);
+      }
+    },
+
     // 获取活动列表
     async getList() {
       this.loading = true;
