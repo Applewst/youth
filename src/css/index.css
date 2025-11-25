@@ -1,0 +1,439 @@
+.header {
+  height: 42px;
+  margin: 30px auto;
+  background-color: #f4f5f7;
+}
+
+
+.header .logo {
+  float: left;
+  background-image: url(../img/bases/logo.png);
+  width: 198px;
+  height: 60px;
+}
+
+li {
+  float: left;
+  list-style: none;
+  margin: 0 15px;
+}
+
+.nav {
+  float: left;
+  margin-left: 60px;
+}
+
+.nav a {
+  margin-top: 17px;
+}
+
+.clearfix:before,
+.clearfix:after {
+  content: "";
+  display: table;
+}
+
+.clearfix:after {
+  clear: both;
+}
+
+.nav ul li a {
+  display: block;
+  height: 42px;
+  padding: 0 10px;
+  line-height: 42px;
+  font-size: 18px;
+  color: #050505;
+}
+
+.nav ul li a:hover {
+  font-size: 20px;
+  transition: .3s;
+  display: inline-block;
+
+  color: red;
+  transform: scale(1.2);
+  border-bottom: 2px solid #90002180;
+}
+
+.serch {
+  float: left;
+  width: 412px;
+  height: 42px;
+  background-color: #f4f5f7;
+  margin-left: 50px;
+}
+
+.serch input {
+  float: left;
+  width: 345px;
+  height: 40px;
+  border: 1px solid #93c5e0;
+  border-right: 0;
+  /* color: #bfbfbf; */
+  font-size: 14px;
+  font-weight: 700;
+  padding-left: 15px;
+  margin-top: 17px;
+
+  border-radius: 10px 0 0 10px;
+}
+
+input::placeholder {
+  color: #bfbfbf;
+}
+
+input:focus {
+  color: #900021;
+  outline: none;
+  border-bottom: 1px solid rgb(76, 59, 224);
+  transition: 0.8s;
+}
+
+
+.iconfont {
+  font-size: 30px;
+  transition: .3s;
+  display: inline-block;
+}
+
+i:hover {
+  color: red;
+  transform: scale(1.2);
+}
+
+.serch button {
+  float: left;
+  width: 50px;
+  height: 42px;
+  /* 去掉按钮默认的边框 */
+  border: 0;
+  background-color: #93c5e0;
+
+  border-radius: 0 10px 10px 0;
+  margin-top: 17px;
+}
+
+.serch img {
+  width: 50px;
+  height: 42px;
+
+  padding-top: 4px;
+}
+
+.user {
+  float: right;
+  line-height: 42px;
+  margin-right: 30px;
+  font-size: 14px;
+  color: #666666;
+
+  margin-top: 17px;
+}
+
+/* banner区域 */
+
+.banner {
+  height: 421px;
+  background-color: #93c5e0;
+}
+
+.banner .w {
+  height: 421px;
+  background-image: url(../img/bases/banner.png);
+}
+
+.subnav {
+  float: left;
+  width: 190px;
+  height: 421px;
+  background: rgba(0, 0, 0, .3);
+}
+
+.subnav ul li {
+  height: 45px;
+  line-height: 45px;
+  padding: 0 20px;
+}
+
+.subnav ul li a {
+  font-size: 14px;
+  color: #fff;
+}
+
+.subnav ul li a span {
+  float: right;
+}
+
+.subnav ul li a:hover {
+  color: #900021;
+}
+
+.course {
+  float: right;
+  width: 230px;
+  height: 335px;
+  background-color: #f4f5f7;
+  margin-top: 50px;
+  border-radius: 10px;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.1);
+}
+
+.course h2 {
+  height: 48px;
+  background-color: #9bceea;
+  text-align: center;
+  line-height: 48px;
+  font-size: 18px;
+  color: #fff;
+
+  border-radius: 10px 10px 0 0;
+  /* box-shadow: 5px 5px 5px rgba(0,0,0,0.1); */
+}
+
+.bd {
+  padding: 0 20px;
+  background-color: #f4f5f7;
+}
+
+.bd ul li {
+  padding: 14px 0;
+  border-bottom: 1px solid #cccccc
+}
+
+.bd ul li h4 {
+  font-size: 15px;
+  color: #4e4e4e;
+}
+
+.bd ul li p {
+  font-size: 12px;
+  color: #a5a5a5;
+}
+
+.bd .m {
+  display: block;
+  height: 38px;
+  text-align: center;
+  margin-top: 5px;
+  line-height: 38px;
+  color: #00a4ff;
+  font-size: 16px;
+  font-weight: 700px;
+}
+
+/* 精品推荐模块 */
+
+.good {
+  position: relative;
+  height: 60px;
+  background-color: #fff;
+  margin-top: 10px;
+  box-shadow: 0 2px 3px 3px rgba(0, 0, 0, .1);
+  line-height: 60px;
+  padding: 0 30px;
+
+  border-radius: 10px;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.1);
+
+  overflow: hidden;
+}
+
+
+.good::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1260px;
+  height: 60px;
+  border-radius: 10px;
+  background-color: skyblue;
+  opacity: 0.3;
+  transform: translateX(-1260px);
+  transition: 1.8s;
+}
+
+.good:hover::before {
+  transform: translateX(0);
+}
+
+.good h3,
+ul,
+a {
+  position: relative;
+  z-index: 10;
+}
+
+.good h3 {
+  float: left;
+  font-size: 16px;
+  color: #00a4ff;
+}
+
+.good ul {
+  float: left;
+  margin-left: 30px;
+}
+
+.good ul li {
+  float: left;
+}
+
+.good ul li a {
+  padding: 0 30px;
+  font-size: 16px;
+  color: #050505;
+  border-left: 1px solid #cccccc;
+}
+
+.mod {
+  float: right;
+  margin-left: 30px;
+  font-size: 14px;
+  color: #00a4ff;
+}
+
+.box {
+  margin-top: 30px;
+}
+
+.box-hd {
+  height: 45px;
+}
+
+.box-hd h3 {
+  float: left;
+  font-style: 20px;
+  color: #494949;
+}
+
+.box-hd a {
+  float: right;
+  font-size: 12px;
+  color: #a5a5a5;
+  margin-top: 10px;
+}
+
+.box-hd a:hover {
+  transition: .8s;
+  display: inline-block;
+
+
+  color: black;
+  transform: scale(1.212);
+}
+
+.box-bd ul li {
+  float: left;
+  width: 220px;
+  height: 270px;
+  background-color: #fff;
+  margin-top: 15px;
+  margin-right: 15px;
+
+
+  border-radius: 10px;
+}
+
+.box-bd ul {
+  width: 1300px;
+}
+
+.box-bd ul li img {
+  border-radius: 10px;
+  width: 100%;
+}
+
+.box-bd ul li:hover {
+  box-shadow: 0 0 20px 2px rgba(196, 110, 110, 0.5);
+}
+
+.box-bd ul li img:hover {
+  box-shadow: 0 0 20px 2px rgba(218, 49, 49, 0.5);
+}
+
+.box-bd ul li h4 {
+  margin: 10px 0 20px 0;
+  font-size: 14px;
+  color: 050505;
+  font-weight: 400;
+}
+
+.box-bd .info {
+  margin: 10px 0 10px 0;
+  font-size: 14px;
+  color: #999999;
+}
+
+.box-bd .info span {
+  color: #ff7c2d;
+}
+
+.footer {
+  height: 415px;
+  background-color: #fff;
+}
+
+.footer .w {
+  margin-top: 30px;
+  padding: 35px;
+}
+
+.cpoyright {
+  float: left;
+}
+
+.links {
+  float: right;
+}
+
+#r {
+  font-size: 20px;
+  color: #333333;
+}
+
+#t {
+  font-size: 20px;
+  color: #333333;
+}
+
+#y {
+  font-size: 20px;
+  color: #333333;
+}
+
+.links dl dt {
+  font-size: 16px;
+  color: #333333;
+  margin-bottom: 5px;
+}
+
+.links dl dt a {
+  font-size: 12px;
+  color: #333333;
+}
+
+#qq {
+  font-size: 12px;
+  color: #666666;
+  margin: 20px 0 15px 0;
+}
+
+#app {
+  display: block;
+  /* width: 118px; */
+  /* height: 33px; */
+  /* border: 1px solid #f57da0; */
+  text-align: center;
+  /* line-height: 33px; */
+  color: #f57da0;
+  font-size: 16px;
+  border-radius: 10px;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.1);
+}
+
+.links dl {
+  float: left;
+  margin-left: 100px;
+}
