@@ -290,6 +290,19 @@ function mockGetActivityById(id) {
   })
 }
 
+// 模拟参与活动数据
+const mockJoinActivity = (activityId, userId) => {
+  return {
+    code: 0,
+    msg: "参与活动成功",
+    data: {
+      activityId,
+      userId,
+      joinTime: new Date().toISOString().replace("T", " ").slice(0, 19),
+    },
+  };
+};
+
 // 分页查询活动列表
 export function getActivityPage(params) {
   if (USE_MOCK_DATA) {
@@ -346,4 +359,17 @@ export function getActivityById(id) {
     url: `/admin/activity/${id}`,
     method: "get",
   })
+}
+
+// 参与活动
+export async function joinActivity(data) {
+  if (USE_MOCK_DATA) {
+    return mockJoinActivity(data.activityId, data.userId);
+  } else {
+    return request({
+      url: "/activity/join",
+      method: "post",
+      data,
+    });
+  }
 }

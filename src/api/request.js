@@ -3,7 +3,7 @@ import { Message } from 'element-ui'
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: 'http://localhost:8080', // 基础URL
+  baseURL: 'http://172.20.10.5:8080', // 基础URL
   timeout: 10000, // 请求超时时间
   headers: {
     'Content-Type': 'application/json'
@@ -14,7 +14,7 @@ const request = axios.create({
 request.interceptors.request.use(
   config => {
     // 在发送请求之前做些什么
-    console.log('发送请求:', config)
+    // console.log('发送请求:', config)
     
     // 如果有token，添加到请求头
     const token = localStorage.getItem('token')
@@ -35,7 +35,7 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   response => {
     // 对响应数据做点什么
-    console.log('响应数据:', response)
+    // console.log('响应数据:', response)
     
     const { data, status } = response
     
@@ -43,8 +43,8 @@ request.interceptors.response.use(
     if (status === 200) {
       // 如果后端返回的数据结构是 { code, data, msg }
       if (data.code !== undefined) {
-        if (data.code === 200 || data.code === 0) {
-          return data.data || data
+        if (data.code === 1) {
+          return data.data||data
         } else {
           // 业务错误
           Message.error(data.msg || '请求失败')

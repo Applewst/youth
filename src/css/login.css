@@ -16,6 +16,21 @@
     /* 渐变背景 */
 }
 
+.password-input {
+  position: relative;
+}
+.password-input .el-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #999;
+}
+.el-form-item {
+  margin-bottom: 0px; /* 调整表单项间距，根据实际样式调整 */
+}
+
 .container {
     background-color: #fff;
     width: 700px;

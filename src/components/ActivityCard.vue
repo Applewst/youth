@@ -1,159 +1,178 @@
 <template>
-  <div class="activity-card">
-    <div class="card-image">
-      <img :src="activity.image" :alt="activity.title" />
-      <div class="card-overlay">
-        <el-button type="primary" size="small" @click="handleJoin">
-          参与活动
-        </el-button>
-      </div>
+  <el-card
+    :body-style="{ padding: '0px' }"
+    class="activity-card"
+    @click.native="handleClick"
+  >
+    <div class="image-wrapper">
+      <!-- 使用真实API数据结构的image字段 -->
+      <img :src="activity.image" class="activity-image" :alt="activity.name" />
+      <!-- 根据status状态显示标签，status=1表示进行中 -->
+      <el-tag v-if="activity.status === 1" type="success" class="status-tag">
+        进行中
+      </el-tag>
+      <el-tag v-else type="info" class="status-tag"> 已结束 </el-tag>
     </div>
     <div class="card-content">
-      <h4 class="card-title">{{ activity.title }}</h4>
-      <div class="card-info">
-        <span class="info-label">活动简介</span> • {{ activity.description }}
+      <!-- 使用API的name字段而不是title -->
+      <h3 class="activity-title">{{ activity.name }}</h3>
+      <p class="activity-desc">{{ activity.description }}</p>
+      <div class="activity-meta">
+        <div class="meta-item">
+          <i class="el-icon-time"></i>
+          <!-- 显示endTime结束时间 -->
+          <span>{{ activity.endTime }}</span>
+        </div>
+        <div class="meta-item">
+          <i class="el-icon-folder-opened"></i>
+          <!-- 显示categoryName分类名称 -->
+          <span>{{ activity.categoryName }}</span>
+        </div>
       </div>
-      <div class="card-meta">
-        <el-tag size="mini" :type="getStatusType(activity.status)">
-          {{ getStatusText(activity.status) }}
+      <div class="activity-footer">
+        <div class="participants">
+          <i class="el-icon-user"></i>
+          <!-- 使用participants数组的长度作为参与人数 -->
+          <span>{{ participantCount }}人已参加</span>
+        </div>
+        <!-- 使用categoryName显示分类标签 -->
+        <el-tag :type="getCategoryType(activity.categoryName)" size="small">
+          {{ activity.categoryName }}
         </el-tag>
-        <span class="card-time">{{ formatTime(activity.startTime) }}</span>
       </div>
     </div>
-  </div>
+  </el-card>
 </template>
 
 <script>
 export default {
-  name: 'ActivityCard',
+  name: "ActivityCard",
   props: {
     activity: {
       type: Object,
       required: true,
-      default: () => ({
-        id: '',
-        title: '',
-        description: '',
-        image: '',
-        status: 'ongoing',
-        startTime: '',
-        location: ''
-      })
-    }
+    },
+  },
+  computed: {
+    participantCount() {
+      return this.activity.participants ? this.activity.participants.length : 0;
+    },
   },
   methods: {
-    handleJoin() {
-      this.$emit('join', this.activity)
+    handleClick() {
+      this.$emit("click", this.activity);
     },
-    getStatusType(status) {
-      const statusMap = {
-        'ongoing': 'success',
-        'upcoming': 'warning',
-        'ended': 'info'
-      }
-      return statusMap[status] || 'info'
+    getCategoryType(categoryName) {
+      const types = {
+        户外活动: "success",
+        学习培训: "primary",
+        团建活动: "warning",
+        商务活动: "info",
+        文化活动: "",
+        公益活动: "success",
+      };
+      return types[categoryName] || "";
     },
-    getStatusText(status) {
-      const statusMap = {
-        'ongoing': '进行中',
-        'upcoming': '即将开始',
-        'ended': '已结束'
-      }
-      return statusMap[status] || '未知'
-    },
-    formatTime(time) {
-      if (!time) return ''
-      return new Date(time).toLocaleDateString()
-    }
-  }
-}
+  },
+};
 </script>
 
 <style scoped>
 .activity-card {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
   cursor: pointer;
+  transition: all 0.3s ease;
+  height: 100%;
 }
 
 .activity-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
-.card-image {
+.image-wrapper {
   position: relative;
+  width: 100%;
   height: 200px;
   overflow: hidden;
 }
 
-.card-image img {
+.activity-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
-.card-overlay {
+.activity-card:hover .activity-image {
+  transform: scale(1.05);
+}
+
+.status-tag {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.activity-card:hover .card-overlay {
-  opacity: 1;
+  top: 12px;
+  right: 12px;
+  font-weight: bold;
 }
 
 .card-content {
   padding: 16px;
 }
 
-.card-title {
+.activity-title {
   margin: 0 0 8px 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  color: #333;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  color: #303133;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.card-info {
-  margin-bottom: 12px;
-  color: #666;
+.activity-desc {
+  margin: 0 0 12px 0;
   font-size: 14px;
+  color: #606266;
   line-height: 1.5;
+  height: 42px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.info-label {
-  color: #409eff;
-  font-weight: 500;
+.activity-meta {
+  margin-bottom: 12px;
 }
 
-.card-meta {
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 16px;
+  font-size: 13px;
+  color: #909399;
+}
+
+.meta-item i {
+  margin-right: 4px;
+}
+
+.activity-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #ebeef5;
 }
 
-.card-time {
-  font-size: 12px;
-  color: #999;
+.participants {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #909399;
+}
+
+.participants i {
+  margin-right: 4px;
 }
 </style>

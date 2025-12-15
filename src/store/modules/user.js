@@ -1,4 +1,10 @@
-import { loginUser, getUserInfo, logoutUser } from '@/api/auth'
+import { 
+  getUserInfo, 
+  logoutUser,
+  adminLogin,
+  teacherLogin,
+  studentLogin
+} from '@/api/auth'
 
 const state = {
   token: localStorage.getItem('token') || '',
@@ -6,7 +12,7 @@ const state = {
     id: null,
     name: '',
     userName: '',
-    role: 'admin' //null 'admin' 或 'student'
+    role: 'teacher' // 'admin' / 'student' / 'teacher'
   },
   isLoggedIn: false
 }
@@ -16,7 +22,9 @@ const getters = {
   userInfo: state => state.userInfo,
   token: state => state.token,
   isAdmin: state => state.userInfo.role === 'admin',
-  isStudent: state => state.userInfo.role === 'student'
+  isStudent: state => state.userInfo.role === 'student',
+  isTeacher: state => state.userInfo.role === 'teacher',
+  isNormalUser: state => ['student', 'teacher'].includes(state.userInfo.role)
 }
 
 const mutations = {
@@ -29,7 +37,8 @@ const mutations = {
       id: userInfo.id,
       name: userInfo.name,
       userName: userInfo.userName,
-      role: userInfo.role || 'student' // 默认为学生
+      // 优先使用接口返回的role，否则用identity映射
+      role: userInfo.role || userInfo.identity || 'student'
     }
     state.isLoggedIn = true
   },
@@ -47,17 +56,46 @@ const mutations = {
 }
 
 const actions = {
-  // 登录
+  // 统一登录入口：处理多身份登录
   async login({ commit }, loginData) {
-    const response = await loginUser(loginData)
-    
-    // 根据您提供的数据格式，response.data 包含 { id, name, token, userName, role }
-    const { token, id, name, userName, role } = response
-    
-    commit('SET_TOKEN', token)
-    commit('SET_USER_INFO', { id, name, userName, role })
-    
-    return response
+    const { identity, ...baseData } = loginData
+    let response
+
+    // 根据身份选择对应登录接口
+    try {
+      switch (identity) {
+        case 'student':
+          response = await studentLogin(baseData)
+          break
+        case 'teacher':
+          response = await teacherLogin(baseData)
+          break
+        case 'admin':
+          response = await adminLogin(baseData)
+          break
+        
+      }
+
+      // 统一处理返回数据
+      const resData = response.data || response
+      const { token, id, name, userName, role } = resData
+
+      // 存储token和用户信息
+      commit('SET_TOKEN', token)
+      commit('SET_USER_INFO', {
+        id,
+        name,
+        userName,
+        role: role || identity, // 接口没返回role则用选择的identity
+        identity
+      })
+
+      return response
+    } catch (error) {
+      // 登录失败清空数据
+      commit('CLEAR_USER_DATA')
+      throw error // 抛出错误给页面处理
+    }
   },
   
   // 获取用户信息
@@ -68,7 +106,8 @@ const actions = {
       }
       
       const response = await getUserInfo()
-      commit('SET_USER_INFO', response)
+      const userInfo = response.data || response
+      commit('SET_USER_INFO', userInfo)
       
       return response
     } catch (error) {

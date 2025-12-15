@@ -19,7 +19,7 @@ import  request  from "./request"
  */
 const mockCategoryList = [
   {
-    id: 1,
+    id: 101,
     name: "周年庆典",
     type: "线上活动",
     sort: 1,
@@ -30,7 +30,7 @@ const mockCategoryList = [
     updateUser: 1,
   },
   {
-    id: 2,
+    id: 102,
     name: "新品发布会",
     type: "线下活动",
     sort: 2,
@@ -41,7 +41,7 @@ const mockCategoryList = [
     updateUser: 1,
   },
   {
-    id: 3,
+    id: 103,
     name: "粉丝见面会",
     type: "混合活动",
     sort: 3,
@@ -52,7 +52,7 @@ const mockCategoryList = [
     updateUser: 2,
   },
   {
-    id: 4,
+    id: 104,
     name: "线上直播",
     type: "直播活动",
     sort: 4,
@@ -63,7 +63,7 @@ const mockCategoryList = [
     updateUser: 1,
   },
   {
-    id: 5,
+    id: 105,
     name: "会员日活动",
     type: "促销活动",
     sort: 5,
@@ -74,7 +74,7 @@ const mockCategoryList = [
     updateUser: 2,
   },
   {
-    id: 6,
+    id: 106,
     name: "教育培训",
     type: "培训活动",
     sort: 6,
@@ -85,7 +85,7 @@ const mockCategoryList = [
     updateUser: 1,
   },
   {
-    id: 7,
+    id: 107,
     name: "抽奖活动",
     type: "互动活动",
     sort: 7,

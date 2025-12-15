@@ -21,59 +21,53 @@ const routes = [
     }
   },
   {
-    path: '/home',
-    name: 'home',
-    component: HomeView,
-    meta: { 
-      requiresAuth: false,//先设置不需要登录
-      title: '首页'
-    }
-  },
-  {
-    path: '/profile',
-    name: 'profile',
-    component: () => import('@/views/ProFileView.vue'),
-    meta: { 
-      requiresAuth: false,
-      title: '个人中心'
-    }
-  },
-  {
-    path: '/settings',
-    name: 'settings',
-    component: () => import('@/views/SettingsView.vue'),
-    meta: { 
-      requiresAuth: false,
-      title: '设置'
-    }
-  },
-  {
-    path: '/category',
-    name: 'category',
-    component: () => import('@/views/CategoryView.vue'),
-    meta: { 
-      requiresAuth: false,
-      title: '二课活动'
-    }
-  },
-  {
-    path: '/activity',
-    name: 'activity',
-    component: () => import('@/views/ActivityView.vue'),
-    meta: { 
-      requiresAuth: false,
-      title: '活动管理'
-    }
-  },
-  {
-    path: '/admin',
-    name: 'admin',
-    component: () => import('@/views/AdminPanel.vue'),
-    meta: { 
-      requiresAuth: false,
-      requiresAdmin: true,
-      title: '管理员后台'
-    }
+    path: '/', 
+    component:()=>import('@/components/Header.vue'), 
+    children: [
+      {
+        path: 'home',
+        name: 'home',
+        component: HomeView,
+        meta: { 
+          requiresAuth: false, // 所有角色都需要登录
+          title: '首页',
+          roles: ['student', 'teacher', 'admin'] // 所有角色可访问
+        }
+      },
+      // 管理员专属：活动管理
+      {
+        path: 'activity',
+        name: 'activity',
+        component: () => import('@/views/ActivityView.vue'),
+        meta: { 
+          requiresAuth: false,
+          title: '活动管理',
+          roles: ['admin'] // 仅管理员可访问
+        }
+      },
+      // 管理员专属：分类管理
+      {
+        path: 'category',
+        name: 'category',
+        component: () => import('@/views/CategoryView.vue'),
+        meta: { 
+          requiresAuth: false,
+          title: '分类管理',
+          roles: ['admin'] // 仅管理员可访问
+        }
+      },
+      // 管理员专属：成员管理
+      {
+        path: 'admin',
+        name: 'admin',
+        component: () => import('@/views/AdminPanel.vue'),
+        meta: { 
+          requiresAuth: false,
+          title: '成员管理',
+          roles: ['admin'] // 仅管理员可访问
+        }
+      }
+    ]
   },
   {
     path: '*',
@@ -90,11 +84,10 @@ const router = new VueRouter({
   mode: 'history',
   routes,
   scrollBehavior(to, from, savedPosition) {
-    // 控制页面跳转时的滚动位置
     if (savedPosition) {
-      return savedPosition// 从历史记录返回时，恢复之前的滚动位置
+      return savedPosition
     } else {
-      return { x: 0, y: 0 }// 默认滚动到页面顶部
+      return { x: 0, y: 0 }
     }
   }
 })
@@ -112,7 +105,6 @@ router.beforeEach(async (to, from, next) => {
     const isLoggedIn = store.getters['user/isLoggedIn']
     
     if (!token || !isLoggedIn) {
-      // 没有token或未登录，跳转到登录页
       next({
         path: '/login',
         query: { redirect: to.fullPath }
@@ -125,7 +117,6 @@ router.beforeEach(async (to, from, next) => {
       try {
         await store.dispatch('user/getUserInfo')
       } catch (error) {
-        // 获取用户信息失败，清除token并跳转到登录页
         store.dispatch('user/clearUserData')
         next({
           path: '/login',
@@ -134,13 +125,12 @@ router.beforeEach(async (to, from, next) => {
         return
       }
     }
-  }
-  
-  // 检查是否需要管理员权限
-  if (to.meta.requiresAdmin) {
-    const isAdmin = store.getters['user/isAdmin']
-    if (!isAdmin) {
-      // 不是管理员，跳转到首页并提示
+
+    // 角色权限校验
+    const userRole = store.getters['user/userInfo'].role
+    if (to.meta.roles && !to.meta.roles.includes(userRole)) {
+      // 无权限访问，跳回首页
+      this.$message.error('无权限访问该页面')
       next('/home')
       return
     }
@@ -157,8 +147,10 @@ router.beforeEach(async (to, from, next) => {
 
 // 全局后置钩子
 router.afterEach(() => {
-  // 清除错误信息
-  store.dispatch('clearError')
+  // 清除错误信息（如果有）
+  if (store.dispatch('clearError')) {
+    store.dispatch('clearError')
+  }
 })
 
 export default router
