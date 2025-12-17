@@ -5,6 +5,7 @@
     width="700px"
     :before-close="handleClose"
     class="activity-dialog"
+    append-to-body
   >
     <div v-if="activity" class="dialog-content">
       <div class="dialog-image">
@@ -12,7 +13,6 @@
       </div>
 
       <div class="dialog-info">
-        <!-- 动态匹配分类标签样式 -->
         <el-tag
           :type="getCategoryTypeByApi(activity.categoryName)"
           size="medium"
@@ -66,7 +66,6 @@
               <span class="info-value">{{ activity.categoryName }}</span>
             </div>
           </el-col>
-          <!-- 新增：显示分类类型（从接口获取） -->
           <el-col :span="24" v-if="getCategoryTypeText(activity.categoryName)">
             <div class="info-item">
               <span class="info-label">分类类型:</span>
@@ -78,7 +77,6 @@
         </el-row>
       </div>
 
-      <!-- 显示参与者列表 -->
       <div
         v-if="activity.participants && activity.participants.length > 0"
         class="detail-section"
@@ -106,7 +104,6 @@
 
     <span slot="footer" class="dialog-footer">
       <el-button @click="handleClose">取消</el-button>
-      <!-- 只有进行中的活动才能参加 -->
       <el-button
         type="primary"
         @click="handleJoin"
@@ -121,7 +118,6 @@
 </template>
 
 <script>
-// 导入分类API和参与活动API
 import { getCategoryList } from "@/api/category";
 import { joinActivity } from "@/api/activity";
 
@@ -140,8 +136,8 @@ export default {
   data() {
     return {
       joining: false,
-      categoryList: [], // 存储从接口获取的分类列表
-      categoryLoading: false, // 分类加载状态
+      categoryList: [],
+      categoryLoading: false,
     };
   },
   computed: {
@@ -158,7 +154,6 @@ export default {
     },
   },
   watch: {
-    // 弹窗打开时加载分类列表
     visible(newVal) {
       if (newVal && this.activity.categoryName) {
         this.loadCategoryList();
@@ -166,15 +161,14 @@ export default {
     },
   },
   methods: {
-    // 加载分类列表（从接口获取）
     async loadCategoryList() {
-      if (this.categoryList.length > 0) return; // 避免重复请求
+      if (this.categoryList.length > 0) return;
 
       this.categoryLoading = true;
       try {
         const res = await getCategoryList();
         if (res.code === 0) {
-          this.categoryList = res.data; // 存储接口返回的分类列表
+          this.categoryList = res.data;
         }
       } catch (error) {
         console.error("加载分类列表失败:", error);
@@ -184,7 +178,6 @@ export default {
       }
     },
 
-    // 根据分类名称获取对应的类型文本（从接口数据中匹配）
     getCategoryTypeText(categoryName) {
       if (!categoryName || this.categoryList.length === 0) return "";
       const category = this.categoryList.find(
@@ -193,17 +186,14 @@ export default {
       return category ? category.type : "";
     },
 
-    // 动态匹配分类标签样式（基于接口返回的type）
     getCategoryTypeByApi(categoryName) {
       if (!categoryName) return "";
 
-      // 先从接口数据匹配分类类型
       const category = this.categoryList.find(
         (item) => item.name === categoryName
       );
       const type = category ? category.type : "";
 
-      // 根据分类type动态匹配标签样式
       const typeMap = {
         线上活动: "primary",
         线下活动: "success",
@@ -215,7 +205,6 @@ export default {
         默认类型: "",
       };
 
-      // 兼容写死的分类名称（兜底）
       const fallbackMap = {
         户外活动: "success",
         学习培训: "primary",
@@ -233,9 +222,7 @@ export default {
       this.$emit("close");
     },
 
-    // 参与活动逻辑（移到弹窗内部）
     async handleJoin() {
-      // 1. 校验登录状态
       const isLogin = this.$store?.getters["user/isLogin"];
       if (!isLogin) {
         this.$message.warning("请先登录后再参与活动");
@@ -246,16 +233,14 @@ export default {
 
       this.joining = true;
       try {
-        // 2. 调用参与活动API
         const res = await joinActivity({
           activityId: this.activity.id,
-          userId: this.$store.getters["user/userInfo"].id, // 登录用户ID
+          userId: this.$store.getters["user/userInfo"].id,
         });
 
         if (res.code === 0) {
           this.$message.success("成功参加活动！");
           this.handleClose();
-          // 通知父组件更新活动列表
           this.$emit("join", this.activity);
         } else {
           this.$message.error(res.msg || "参加活动失败");
@@ -272,13 +257,57 @@ export default {
 </script>
 
 <style scoped>
-.activity-dialog >>> .el-dialog__body {
-  padding: 0 20px 20px;
+/* 核心修复：强制弹窗居中，解决左上角对齐问题 */
+.activity-dialog >>> .el-dialog__wrapper {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  overflow: hidden !important; /* 遮罩层无滚动条 */
+  z-index: 2000 !important; /* 确保层级足够 */
 }
 
+/* 弹窗主体绝对居中，取消所有默认偏移 */
+.activity-dialog >>> .el-dialog {
+  margin: 0 !important;
+  position: absolute !important; /* 改为absolute，基于wrapper定位 */
+  top: 50% !important; /* 先定位到垂直50% */
+  left: 50% !important; /* 先定位到水平50% */
+  transform: translate(-50%, -50%) !important; /* 反向偏移自身50%实现居中 */
+  max-height: 90vh !important;
+  width: 700px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* 弹窗内容区滚动，整体不滚动 */
+.activity-dialog >>> .el-dialog__body {
+  padding: 0 20px 20px !important;
+  flex: 1 !important;
+  overflow-y: auto !important;
+  max-height: calc(90vh - 120px) !important; /* 减去标题和底部高度 */
+}
+
+/* 弹窗头部样式修正 */
+.activity-dialog >>> .el-dialog__header {
+  padding: 20px 20px 10px !important;
+  border-bottom: 1px solid #ebeef5;
+}
+
+/* 弹窗底部样式修正 */
+.activity-dialog >>> .el-dialog__footer {
+  padding: 10px 20px 20px !important;
+  border-top: 1px solid #ebeef5;
+}
+
+/* 原有样式保留 */
 .dialog-content {
-  max-height: 70vh;
-  overflow-y: auto;
+  height: 100%;
 }
 
 .dialog-image {
@@ -330,13 +359,6 @@ export default {
   line-height: 1.6;
 }
 
-.detail-full {
-  margin: 0;
-  font-size: 14px;
-  color: #606266;
-  line-height: 1.8;
-}
-
 .info-item {
   margin-bottom: 12px;
   font-size: 14px;
@@ -356,5 +378,21 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .activity-dialog >>> .el-dialog {
+    width: 90% !important;
+    max-height: 95vh !important;
+  }
+
+  .activity-dialog >>> .el-dialog__body {
+    max-height: calc(95vh - 120px) !important;
+  }
+
+  .dialog-image {
+    height: 200px;
+  }
 }
 </style>

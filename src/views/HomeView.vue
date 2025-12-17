@@ -221,6 +221,22 @@ export default {
     this.loadCategories();
     this.loadActivities();
   },
+  watch: {
+    dialogVisible(newVal) {
+      // 弹窗打开时给body添加禁止滚动类名
+      if (newVal) {
+        document.body.classList.add("dialog-open");
+        this.$el.classList.add("dialog-open");
+      } else {
+        document.body.classList.remove("dialog-open");
+        this.$el.classList.remove("dialog-open");
+      }
+    },
+  },
+  beforeDestroy() {
+    document.body.classList.remove("dialog-open");
+    this.$el.classList.remove("dialog-open");
+  },
   methods: {
     // 加载分类列表（用于筛选标签）
     async loadCategories() {
@@ -334,15 +350,11 @@ export default {
   background: #f5f7fa;
 }
 
-.main-content {
-  padding-top: 60px;
-}
-
 .banner {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 60px 0;
-  margin-bottom: 40px;
+  padding: 20px 0;
+  margin-bottom: 20px;
 }
 
 .banner-content {
