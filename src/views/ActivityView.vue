@@ -11,10 +11,10 @@
             @keyup.enter.native="handleQuery"
           />
         </el-form-item>
-        <el-form-item label="分类ID">
+        <el-form-item label="分类名称">
           <el-input
             v-model="queryParams.categoryId"
-            placeholder="请输入分类ID"
+            placeholder="请输入分类名称"
             clearable
             @keyup.enter.native="handleQuery"
           />
@@ -98,23 +98,54 @@
           </template>
         </el-table-column>
         <el-table-column prop="endTime" label="结束时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template slot-scope="scope">
-            <el-button
-              type="text"
-              icon="el-icon-edit"
-              size="small"
-              @click="handleUpdate(scope.row)"
-              >编辑</el-button
-            >
-            <el-button
-              type="text"
-              icon="el-icon-delete"
-              size="small"
-              style="color: #f56c6c"
-              @click="handleDelete(scope.row)"
-              >删除</el-button
-            >
+            <!-- 启用状态显示的按钮 -->
+            <div v-if="scope.row.status === 1">
+              <el-button
+                type="text"
+                icon="el-icon-edit"
+                size="small"
+                @click="handleUpdate(scope.row)"
+                >编辑</el-button
+              >
+              <el-button
+                type="text"
+                icon="el-icon-delete"
+                size="small"
+                style="color: #f56c6c"
+                @click="handleDelete(scope.row)"
+                >删除</el-button
+              >
+              <el-button
+                type="text"
+                icon="el-icon-switch-button"
+                size="small"
+                style="color: #e6a23c"
+                @click="handleDisable(scope.row)"
+                >禁用</el-button
+              >
+            </div>
+
+            <!-- 禁用状态显示的按钮 -->
+            <div v-else>
+              <el-button
+                type="text"
+                icon="el-icon-refresh-left"
+                size="small"
+                style="color: #67c23a"
+                @click="handleMakeUp(scope.row)"
+                >补签</el-button
+              >
+              <el-button
+                type="text"
+                icon="el-icon-share"
+                size="small"
+                style="color: #409eff"
+                @click="handleGrantPoints(scope.row)"
+                >发放二课分</el-button
+              >
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -148,10 +179,10 @@
         <el-form-item label="活动名称" prop="name">
           <el-input v-model="activityForm.name" placeholder="请输入活动名称" />
         </el-form-item>
-        <el-form-item label="分类ID" prop="categoryId">
+        <el-form-item label="分类名称" prop="categoryId">
           <el-input
             v-model.number="activityForm.categoryId"
-            placeholder="请输入分类ID"
+            placeholder="请输入分类名称"
           />
         </el-form-item>
         <el-form-item label="描述" prop="description">
@@ -216,6 +247,196 @@
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleSubmit">确定</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 补签对话框 -->
+    <!-- 补签对话框（新增人员选择列表） -->
+    <el-dialog
+      title="补签管理"
+      :visible.sync="makeUpDialogVisible"
+      width="900px"
+    >
+      <!-- 搜索可补签人员 -->
+      <el-form :inline="true" :model="retroactiveQuery" class="mb-20">
+        <el-form-item label="活动ID">
+          <el-input v-model="retroactiveQuery.activityId" disabled />
+        </el-form-item>
+        <el-form-item label="人员名称">
+          <el-input
+            v-model="retroactiveQuery.name"
+            placeholder="请输入人员名称"
+            @keyup.enter.native="getRetroactiveList"
+          />
+        </el-form-item>
+        <el-form-item label="报名状态">
+          <el-select
+            v-model="retroactiveQuery.registrationStatus"
+            placeholder="请选择报名状态"
+          >
+            <el-option label="已报名" value="REGISTERED" />
+            <el-option label="未报名" value="UNREGISTERED" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
+            icon="el-icon-search"
+            @click="getRetroactiveList"
+          >
+            查询
+          </el-button>
+        </el-form-item>
+      </el-form>
+
+      <!-- 可补签人员列表（带选择框） -->
+      <el-dialog
+        title="补签管理"
+        :visible.sync="makeUpDialogVisible"
+        width="900px"
+      >
+        <!-- 搜索可补签人员 -->
+        <el-form :inline="true" :model="retroactiveQuery" class="mb-20">
+          <el-form-item label="活动ID">
+            <el-input v-model="retroactiveQuery.activityId" disabled />
+          </el-form-item>
+          <el-form-item label="人员名称">
+            <el-input
+              v-model="retroactiveQuery.name"
+              placeholder="请输入人员名称"
+              @keyup.enter.native="getRetroactiveList"
+            />
+          </el-form-item>
+          <el-form-item label="报名状态">
+            <el-select
+              v-model="retroactiveQuery.registrationStatus"
+              placeholder="请选择报名状态"
+              clearable
+            >
+              <!-- 修正：已报名/已申请 -->
+              <el-option label="已报名" value="REGISTERED" />
+              <el-option label="已签到" value="APPLIED" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button
+              type="primary"
+              icon="el-icon-search"
+              @click="getRetroactiveList"
+            >
+              查询
+            </el-button>
+          </el-form-item>
+        </el-form>
+
+        <!-- 可补签人员列表（带选择框） -->
+        <el-table
+          :data="retroactiveList"
+          border
+          style="width: 100%"
+          @selection-change="handleRetroactiveSelectionChange"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column prop="id" label="人员ID" width="100" />
+          <el-table-column prop="name" label="姓名" min-width="120" />
+          <el-table-column
+            prop="registrationStatus"
+            label="报名状态"
+            width="120"
+          >
+            <template slot-scope="scope">
+              <!-- 修正：显示已报名/已申请，对应不同样式 -->
+              <el-tag
+                :type="
+                  scope.row.registrationStatus === 'REGISTERED'
+                    ? 'success'
+                    : 'primary'
+                "
+              >
+                {{
+                  scope.row.registrationStatus === "REGISTERED"
+                    ? "已报名"
+                    : "已申请"
+                }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="补签理由" min-width="200">
+            <template slot-scope="scope">
+              <el-input
+                v-model="scope.row.reason"
+                placeholder="请输入补签理由"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页 -->
+        <el-pagination
+          style="margin-top: 15px; text-align: right"
+          @size-change="handleRetroactiveSizeChange"
+          @current-change="handleRetroactiveCurrentChange"
+          :current-page="retroactiveQuery.page"
+          :page-sizes="[10, 20, 50]"
+          :page-size="retroactiveQuery.pageSize"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="retroactiveTotal"
+        />
+
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="makeUpDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="handleSubmitMakeUp"
+            :disabled="selectedRetroactiveList.length === 0"
+          >
+            确定补签
+          </el-button>
+        </div>
+      </el-dialog>
+
+      <!-- 分页 -->
+      <el-pagination
+        style="margin-top: 15px; text-align: right"
+        @size-change="handleRetroactiveSizeChange"
+        @current-change="handleRetroactiveCurrentChange"
+        :current-page="retroactiveQuery.page"
+        :page-sizes="[10, 20, 50]"
+        :page-size="retroactiveQuery.pageSize"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="retroactiveTotal"
+      />
+
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="makeUpDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleSubmitMakeUp"
+          :disabled="selectedRetroactiveList.length === 0"
+        >
+          确定补签
+        </el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 发放二课分对话框 -->
+    <el-dialog
+      :title="`发放二课分 - 活动ID：${grantPointsForm.activityId}`"
+      :visible.sync="grantPointsDialogVisible"
+      width="400px"
+      :close-on-click-modal="false"
+    >
+      <div style="padding: 20px; text-align: center; font-size: 16px">
+        确定要为该活动发放二课分吗？
+        <div style="margin-top: 10px; color: #909399; font-size: 14px">
+          二课分ID：{{ grantPointsForm.activityId }}（与活动ID一致）
+        </div>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="grantPointsDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmitGrantPoints"
+          >确定发放</el-button
+        >
       </div>
     </el-dialog>
 
@@ -309,6 +530,10 @@ import {
   addActivity,
   updateActivity,
   deleteActivity,
+  disableActivity,
+  makeUpActivity,
+  grantActivityPoints,
+  getRetroactivePage,
 } from "@/api/activity";
 
 import { uploadFile } from "@/api/upload";
@@ -356,6 +581,28 @@ export default {
           { required: true, message: "请选择结束时间", trigger: "change" },
         ],
       },
+      // 补签相关
+      makeUpDialogVisible: false,
+      // 补签人员查询参数
+      retroactiveQuery: {
+        activityId: "",
+        name: "",
+        page: 1,
+        pageSize: 10,
+        registrationStatus: "",
+      },
+      // 可补签人员列表
+      retroactiveList: [],
+      retroactiveTotal: 0,
+      // 选中的补签人员
+      selectedRetroactiveList: [],
+
+      // 发放二课分相关
+      grantPointsDialogVisible: false,
+      grantPointsForm: {
+        activityId: "", // 活动ID = 二课分ID
+      },
+
       // 参与者相关数据
       participantsDialogVisible: false,
       currentActivity: null,
@@ -394,13 +641,12 @@ export default {
       try {
         // 调用你的 uploadFile 接口上传文件
         const res = await uploadFile(options.file);
+        console.log(res);
+
         // 假设接口返回格式：{ code: 0, data: "https://xxx.com/xxx.jpg" }
-        if (res.code === 0 && res.data) {
-          this.activityForm.image = res.data; // 直接填入图片地址
-          this.$message.success("图片上传成功！");
-        } else {
-          this.$message.error("上传失败：" + (res.msg || "未知错误"));
-        }
+
+        this.activityForm.image = res; // 直接填入图片地址
+        this.$message.success("图片上传成功！");
       } catch (err) {
         this.$message.error("上传失败：" + err.message);
       }
@@ -411,8 +657,10 @@ export default {
       this.loading = true;
       try {
         const response = await getActivityPage(this.queryParams);
-        this.activityList = response.data.records || [];
-        this.total = response.data.total || 0;
+        console.log(response);
+
+        this.activityList = response.records || [];
+        this.total = response.total || 0;
       } catch (error) {
         console.error("获取活动列表失败:", error);
       } finally {
@@ -452,8 +700,6 @@ export default {
     },
     // 编辑
     handleUpdate(row) {
-      console.log(row);
-
       this.dialogTitle = "编辑活动";
       this.activityForm = { ...row };
       this.dialogVisible = true;
@@ -477,6 +723,128 @@ export default {
         .catch(() => {
           this.$message.info("已取消删除");
         });
+    },
+    // 禁用活动
+    handleDisable(row) {
+      this.$confirm(`确定要禁用活动"${row.name}"吗？`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(async () => {
+          try {
+            await disableActivity(row.id, { status: 0 });
+            this.$message.success("禁用成功");
+            this.getList();
+          } catch (error) {
+            console.error("禁用失败:", error);
+          }
+        })
+        .catch(() => {
+          this.$message.info("已取消禁用");
+        });
+    },
+    // 补签操作
+    handleMakeUp(row) {
+      this.retroactiveQuery = {
+        activityId: row.id,
+        name: "",
+        page: 1,
+        pageSize: 10,
+        registrationStatus: "",
+      };
+      this.makeUpDialogVisible = true;
+      this.getRetroactiveList(); // 打开后自动查询人员
+    },
+    async getRetroactiveList() {
+      this.loading = true;
+      try {
+        const response = await getRetroactivePage(this.retroactiveQuery);
+        // 给每个人员默认加reason字段（用于填写补签理由）
+        this.retroactiveList = (response.data.records || []).map((item) => ({
+          ...item,
+          reason: "",
+        }));
+        this.retroactiveTotal = response.data.total || 0;
+      } catch (error) {
+        console.error("获取补签人员失败:", error);
+        this.$message.error("获取补签人员失败");
+      } finally {
+        this.loading = false;
+      }
+    },
+    // 补签人员分页-每页条数改变
+    handleRetroactiveSizeChange(val) {
+      this.retroactiveQuery.pageSize = val;
+      this.getRetroactiveList();
+    },
+
+    // 补签人员分页-当前页改变
+    handleRetroactiveCurrentChange(val) {
+      this.retroactiveQuery.page = val;
+      this.getRetroactiveList();
+    },
+
+    // 补签人员选择事件
+    handleRetroactiveSelectionChange(val) {
+      this.selectedRetroactiveList = val;
+    },
+
+    // 提交补签（选择人员+理由）
+    async handleSubmitMakeUp() {
+      // 校验选中人员的理由是否填写
+      const hasEmptyReason = this.selectedRetroactiveList.some(
+        (item) => !item.reason.trim()
+      );
+      if (hasEmptyReason) {
+        this.$message.error("请为选中的人员填写补签理由");
+        return;
+      }
+
+      try {
+        // 构造补签参数：提取选中人员的ID和理由
+        const retroactiveDTOList = this.selectedRetroactiveList.map((item) => ({
+          studentId: item.id,
+          reason: item.reason.trim(),
+        }));
+
+        // 调用补签接口
+        await makeUpActivity(
+          this.retroactiveQuery.activityId, // 活动ID（路径参数）
+          JSON.stringify(retroactiveDTOList) // 补签人员列表（query参数）
+        );
+
+        this.$message.success("补签成功");
+        this.makeUpDialogVisible = false;
+        this.getList(); // 刷新活动列表
+      } catch (error) {
+        console.error("补签失败:", error);
+        this.$message.error("补签失败：" + (error.msg || "接口请求异常"));
+      }
+    },
+
+    // 发放二课分
+    handleGrantPoints(row) {
+      this.grantPointsForm = {
+        activityId: row.id, // 活动ID即为二课分ID
+      };
+      this.grantPointsDialogVisible = true;
+    },
+    // 提交发放二课分
+    async handleSubmitGrantPoints() {
+      try {
+        // 调用发放接口：仅传递二课分ID（活动ID）
+        await grantActivityPoints({
+          secondClassId: this.grantPointsForm.activityId, // 二课分ID = 活动ID
+        });
+
+        this.$message.success("二课分发放成功");
+        this.grantPointsDialogVisible = false;
+        this.getList(); // 刷新活动列表
+      } catch (error) {
+        console.error("发放二课分失败:", error);
+        this.$message.error("发放二课分失败：" + (error.msg || "接口请求异常"));
+      }
     },
     // 提交表单
     handleSubmit() {
@@ -580,6 +948,7 @@ export default {
         }
       });
     },
+
     handleParticipantDialogClose() {
       this.$refs.participantForm.resetFields();
       this.participantForm = {

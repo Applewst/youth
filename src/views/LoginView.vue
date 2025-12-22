@@ -65,12 +65,16 @@
               placeholder="确认密码"
             />
           </el-form-item>
+          <!-- 修复：注册按钮 - 改用v-loading指令 -->
           <button
             type="button"
             @click="registerUser"
             :disabled="isRegisterLoading"
+            v-loading="isRegisterLoading"
+            element-loading-text="注册中..."
+            element-loading-spinner="el-icon-loading"
+            element-loading-background="rgba(0, 0, 0, 0.1)"
           >
-            <el-loading v-if="isRegisterLoading" type="mini" />
             注册
           </button>
         </el-form>
@@ -95,7 +99,6 @@
             clearable
             placeholder="请选择学校"
             :popper-append-to-body="true"
-            :disabled="loginData.identity === 'admin'"
           >
             <el-option
               v-for="s in validSchools"
@@ -114,12 +117,20 @@
             >
               <el-radio label="student" border>学生</el-radio>
               <el-radio label="teacher" border>老师</el-radio>
-              <el-radio label="admin" border>管理员</el-radio>
+              <el-radio label="emp" border>管理员</el-radio>
             </el-radio-group>
           </div>
 
-          <button type="button" @click="loginUser" :disabled="isLoginLoading">
-            <el-loading v-if="isLoginLoading" type="mini" />
+          <!-- 修复：登录按钮 - 改用v-loading指令 -->
+          <button
+            type="button"
+            @click="loginUser"
+            :disabled="isLoginLoading"
+            v-loading="isLoginLoading"
+            element-loading-text="登录中..."
+            element-loading-spinner="el-icon-loading"
+            element-loading-background="rgba(0, 0, 0, 0.1)"
+          >
             登录
           </button>
         </div>
@@ -340,7 +351,7 @@ export default {
       if (!username) emptyFields.push("用户名");
       if (!password) emptyFields.push("密码");
       // 管理员可选填学校，学生/老师必填
-      if (identity !== "admin" && !school) emptyFields.push("学校");
+      if (identity !== "emp" && !school) emptyFields.push("学校");
 
       if (emptyFields.length > 0) {
         const tip = `请输入${emptyFields.join("、")}`;
@@ -353,7 +364,7 @@ export default {
         username,
         password,
         identity, // 传递身份标识给Vuex
-        ...(identity !== "admin" && { school }),
+        ...(identity !== "emp" && { school }),
       };
 
       // 3. 调用Vuex的login action
@@ -363,30 +374,31 @@ export default {
         await this.login(loginParams);
 
         // 获取用户角色信息
-        const userRole = this.$store.getters["user/userInfo"].role;
+        const userRole = this.$store.getters["user/userInfo"];
         const roleText =
           {
-            admin: "管理员",
+            emp: "管理员",
             teacher: "老师",
             student: "学生",
-          }[userRole] || "用户";
+          }[userRole.role] || "用户";
 
         // 个性化提示
         this.showMessage(
-          `🎉 欢迎${roleText}「${username}」登录！`,
+          `🎉 欢迎${roleText}「${userRole.name}」登录！`,
           "success",
-          3500
+          1000
         );
 
-        // 跳转逻辑
-        const redirect =
-          userRole === "admin"
-            ? "/admin/dashboard"
-            : this.$route.query.redirect || "/home";
-
-        setTimeout(() => {
-          this.$router.push(redirect);
-        }, 1000);
+        const targetPath = "/home";
+        // 1. 判断当前是否已在目标页，避免冗余跳转
+        if (this.$route.path !== targetPath) {
+          // 2. 捕获push的Promise异常（兜底）
+          this.$router.push(targetPath).catch((err) => {
+            if (!err.message.includes("NavigationDuplicated")) {
+              console.error("跳转失败:", err);
+            }
+          });
+        }
       } catch (error) {
         console.error("登录失败:", error);
         let errorMsg = error?.message || "登录失败";
@@ -396,14 +408,14 @@ export default {
           {
             student: "学生",
             teacher: "老师",
-            admin: "管理员",
+            emp: "管理员",
           }[identity] || "用户";
 
         if (errorMsg.includes("用户名不存在")) {
           errorMsg = `${identityText}账号「${username}」不存在，请检查账号`;
         } else if (errorMsg.includes("密码错误")) {
           errorMsg = "密码错误，请重新输入";
-        } else if (errorMsg.includes("学校不匹配") && identity !== "admin") {
+        } else if (errorMsg.includes("学校不匹配") && identity !== "emp") {
           errorMsg = `${identityText}账号与所选学校「${school}」不匹配，请确认`;
         } else {
           errorMsg = `${identityText}登录失败：${errorMsg}，请稍后重试`;
@@ -455,8 +467,14 @@ export default {
   text-align: center;
 }
 
-.login-box button:disabled {
+.login-box button:disabled,
+.register-box button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+/* 优化加载状态样式：避免遮罩覆盖整个按钮文字 */
+.el-loading-mask {
+  border-radius: 4px;
 }
 </style>

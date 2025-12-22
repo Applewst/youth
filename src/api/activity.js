@@ -1,4 +1,4 @@
-import request from "./request"
+import request from "../utils/request"
 
 // 是否使用模拟数据（开发时设置为true，生产环境设置为false）
 const USE_MOCK_DATA = true
@@ -372,4 +372,46 @@ export async function joinActivity(data) {
       data,
     });
   }
+}
+
+//禁用活动
+export function disableActivity(id) {
+  return request({
+    url: `/admin/activity/end/${id}`,
+    method: "post",
+    data: {id},
+  })
+}
+
+export function makeUpActivity(id,status) {
+  return request({
+    url: `/admin/activity/retroactive/${id}`,
+    method: "post",
+    data: { id ,status},
+  })
+}
+
+export function grantActivityPoints(id) {
+  return request({
+    url: '/admin/activity/distribute',
+    method: "post",
+    data: { id },
+  })
+}
+
+export function getRetroactivePage(params) {
+  return request({
+    url: '/admin/activity/retroactivePage',
+    method: "get",
+    params,
+  })
+}
+
+//根据套餐id查询活动
+export function getPackageActivityById(packageId) {
+  return request({
+    url: '/admin/activity/byPackage',
+    method: "get",
+    params: { packageId },
+  })
 }

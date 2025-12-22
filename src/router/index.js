@@ -34,6 +34,17 @@ const routes = [
           roles: ['student', 'teacher', 'admin'] // 所有角色可访问
         }
       },
+      //管理员
+      {
+        path: 'package',
+        name: 'package',
+        component: () => import('@/views/PackageActivity.vue'),
+        meta: { 
+          requiresAuth: false,
+          title: '套餐活动',
+          roles: ['admin']
+        }
+      },
       // 管理员专属：活动管理
       {
         path: 'activity',
@@ -112,19 +123,6 @@ router.beforeEach(async (to, from, next) => {
       return
     }
     
-    // 有token但没有用户信息，尝试获取用户信息
-    if (!store.getters['user/userInfo'].id) {
-      try {
-        await store.dispatch('user/getUserInfo')
-      } catch (error) {
-        store.dispatch('user/clearUserData')
-        next({
-          path: '/login',
-          query: { redirect: to.fullPath }
-        })
-        return
-      }
-    }
 
     // 角色权限校验
     const userRole = store.getters['user/userInfo'].role

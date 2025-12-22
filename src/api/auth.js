@@ -1,4 +1,4 @@
-import request from './request'
+import request from '@/utils/request'
 
 // 用户注册
 export function registerUser(userData) {
@@ -28,7 +28,7 @@ export function teacherLogin(loginData) {
 
 export function studentLogin(loginData) {
   return request({
-    url: '/admin/student/login',
+    url: '/user/student/login',
     method: 'post',
     data: loginData
   })
@@ -39,14 +39,6 @@ export function logoutUser() {
   return request({
     url: '/admin/employee/logout',
     method: 'post'
-  })
-}
-
-// 获取用户信息
-export function getUserInfo() {
-  return request({
-    url: '/user/info',
-    method: 'get'
   })
 }
 
@@ -161,7 +153,7 @@ export function getAdminList(params) {
   
   // 实际API调用代码（暂时注释）
   return request({
-    url: '/admin/employee/page',
+    url: '/admin/teacher/page',
     method: 'get',
     params
   })

@@ -11,7 +11,6 @@
             @clear="handleSearch"
           />
         </el-form-item>
-        <!-- 将下拉选择改为输入框,支持字符串搜索 -->
         <el-form-item label="活动类型">
           <el-input
             v-model="searchForm.type"
@@ -20,17 +19,6 @@
             @clear="handleSearch"
           />
         </el-form-item>
-        <!-- <el-form-item label="状态">
-          <el-select
-            v-model="searchForm.status"
-            placeholder="请选择状态"
-            clearable
-            @clear="handleSearch"
-          >
-            <el-option label="启用" :value="1" />
-            <el-option label="禁用" :value="0" />
-          </el-select>
-        </el-form-item> -->
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -41,7 +29,7 @@
       </el-button>
     </el-card>
 
-    <!-- 数据表格 -->
+    <!-- 数据表格（删除status列） -->
     <el-card class="table-card" shadow="never">
       <el-table
         v-loading="loading"
@@ -52,22 +40,8 @@
       >
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="活动分类名称" min-width="150" />
-        <!-- 直接显示type字段的值,不做类型转换 -->
         <el-table-column prop="type" label="活动类型" width="150" />
         <el-table-column prop="sort" label="排序" width="100" />
-        <el-table-column prop="status" label="状态" width="100">
-          <template slot-scope="{ row }">
-            <!-- 添加状态切换开关 -->
-            <el-switch
-              v-model="row.status"
-              :active-value="1"
-              :inactive-value="0"
-              active-color="#13ce66"
-              inactive-color="#ff4949"
-              @change="handleStatusChange(row)"
-            />
-          </template>
-        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180" />
         <el-table-column prop="updateTime" label="更新时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
@@ -87,7 +61,7 @@
         </el-table-column>
       </el-table>
 
-      <!-- 分页 - Vue2 Element UI 语法 -->
+      <!-- 分页 -->
       <el-pagination
         :current-page.sync="pagination.page"
         :page-size.sync="pagination.pageSize"
@@ -100,7 +74,7 @@
       />
     </el-card>
 
-    <!-- 新增/编辑对话框 - Vue2 使用 :visible.sync -->
+    <!-- 新增/编辑对话框 -->
     <el-dialog
       :visible.sync="dialogVisible"
       :title="dialogTitle"
@@ -119,7 +93,6 @@
             placeholder="请输入活动分类名称"
           />
         </el-form-item>
-        <!-- 将下拉选择改为输入框 -->
         <el-form-item label="活动类型" prop="type">
           <el-input v-model="categoryForm.type" placeholder="请输入活动类型" />
         </el-form-item>
@@ -147,7 +120,6 @@ import {
   addCategory,
   updateCategory,
   deleteCategory,
-  updateCategoryStatus,
 } from "@/api/category.js";
 
 export default {
@@ -158,10 +130,10 @@ export default {
 
       tableData: [],
 
+      // 删除status字段（接口无此参数）
       searchForm: {
         name: "",
         type: "",
-        status: "",
       },
 
       pagination: {
@@ -198,39 +170,26 @@ export default {
     async fetchData() {
       this.loading = true;
       try {
+        // 构造请求参数（只传接口支持的name/type/page/pageSize）
         const params = {
           page: this.pagination.page,
           pageSize: this.pagination.pageSize,
+          ...(this.searchForm.name && { name: this.searchForm.name }),
+          ...(this.searchForm.type && { type: this.searchForm.type }),
         };
 
-        if (this.searchForm.name) {
-          params.name = this.searchForm.name;
-        }
-        if (this.searchForm.type) {
-          params.type = this.searchForm.type;
-        }
-        if (this.searchForm.status !== "") {
-          params.status = this.searchForm.status;
-        }
-
         const res = await getCategoryPage(params);
+        console.log(res);
 
-        if (res.code === 0) {
-          let records = res.data.records;
-          if (this.searchForm.status !== "") {
-            records = records.filter(
-              (item) => item.status === this.searchForm.status
-            );
-          }
+        // 修复接口返回处理逻辑（原逻辑写反）
 
-          this.tableData = records;
-          this.pagination.total = res.data.total;
-        } else {
-          this.$message.error(res.msg || "获取数据失败");
-        }
+        this.tableData = res.records || [];
+        this.pagination.total = res.total || 0;
       } catch (error) {
         console.error("fetchData error:", error);
         this.$message.error("获取数据失败");
+        this.tableData = [];
+        this.pagination.total = 0;
       } finally {
         this.loading = false;
       }
@@ -242,7 +201,8 @@ export default {
     },
 
     handleReset() {
-      this.searchForm = { name: "", type: "", status: "" };
+      // 重置时删除status字段
+      this.searchForm = { name: "", type: "" };
       this.pagination.page = 1;
       this.fetchData();
     },
@@ -276,17 +236,11 @@ export default {
           const apiFunc = this.isEdit ? updateCategory : addCategory;
           const res = await apiFunc(this.categoryForm);
 
-          if (res.code === 0) {
-            this.$message.success(
-              res.msg || (this.isEdit ? "更新成功" : "新增成功")
-            );
-            this.dialogVisible = false;
-            this.fetchData();
-          } else {
-            this.$message.error(
-              res.msg || (this.isEdit ? "更新失败" : "新增失败")
-            );
-          }
+          this.$message.success(
+            res.msg || (this.isEdit ? "更新成功" : "新增成功")
+          );
+          this.dialogVisible = false;
+          this.fetchData();
         } catch (error) {
           console.error("handleSubmit error:", error);
           this.$message.error(this.isEdit ? "更新失败" : "新增失败");
@@ -294,41 +248,6 @@ export default {
           this.submitLoading = false;
         }
       });
-    },
-
-    async handleStatusChange(row) {
-      const statusText = row.status === 1 ? "启用" : "禁用";
-      const originalStatus = row.status === 1 ? 0 : 1;
-
-      this.$confirm(`确定要${statusText}该活动分类吗？`, "状态变更确认", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      })
-        .then(async () => {
-          try {
-            const res = await updateCategoryStatus({
-              id: row.id,
-              status: row.status,
-            });
-
-            if (res.code === 0) {
-              this.$message.success(res.msg || "状态更新成功");
-              this.fetchData();
-            } else {
-              this.$message.error(res.msg || "状态更新失败");
-              row.status = originalStatus;
-            }
-          } catch (error) {
-            console.error("handleStatusChange error:", error);
-            this.$message.error("状态更新失败");
-            row.status = originalStatus;
-          }
-        })
-        .catch(() => {
-          // 用户取消操作，恢复原状态
-          row.status = originalStatus;
-        });
     },
 
     handleDelete(row) {
@@ -345,12 +264,8 @@ export default {
           try {
             const res = await deleteCategory(row.id);
 
-            if (res.code === 0) {
-              this.$message.success(res.msg || "删除成功");
-              this.fetchData();
-            } else {
-              this.$message.error(res.msg || "删除失败");
-            }
+            this.$message.success(res.msg || "删除成功");
+            this.fetchData();
           } catch (error) {
             console.error("handleDelete error:", error);
             this.$message.error("删除失败");

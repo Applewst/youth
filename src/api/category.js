@@ -9,7 +9,7 @@ const USE_MOCK_DATA = true
 
 // ==================== 导入依赖 ====================
 
-import  request  from "./request"
+import  request  from "../utils/request"
 
 // ==================== 模拟数据 ====================
 

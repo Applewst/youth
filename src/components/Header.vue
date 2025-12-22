@@ -9,26 +9,21 @@
           <!-- 所有角色都显示首页 -->
           <li><router-link to="/home">首页</router-link></li>
 
-          <!-- 老师和管理员显示发布活动按钮 -->
-          <li v-if="isTeacher" class="publish-btn-item">
-            <el-button
-              type="primary"
-              size="mini"
-              icon="el-icon-plus"
-              @click="handleAdd"
-            >
-              发布活动
-            </el-button>
+          <li v-if="isTeacher" class="publish-nav-item" @click="handleAdd">
+            <a href="javascript:;">发布活动 </a>
           </li>
 
           <!-- 仅管理员显示以下管理菜单 -->
-          <li v-if="isAdmin">
+          <li v-if="isEmp">
+            <router-link to="/package">套餐活动</router-link>
+          </li>
+          <li v-if="isEmp">
             <router-link to="/activity">活动管理</router-link>
           </li>
-          <li v-if="isAdmin">
+          <li v-if="isEmp">
             <router-link to="/category">分类管理</router-link>
           </li>
-          <li v-if="isAdmin">
+          <li v-if="isEmp">
             <router-link to="/admin">成员管理</router-link>
           </li>
         </ul>
@@ -46,8 +41,8 @@
       </div>
       <div class="user">
         <img src="@/img/bases/user.png" alt="用户头像" />
-        <span>{{ userInfo.userName || "游客" }}</span>
-        <el-tag v-if="isAdmin" type="danger" size="mini">管理员</el-tag>
+        <span>{{ userInfo.name || "游客" }}</span>
+        <el-tag v-if="isEmp" type="danger" size="mini">管理员</el-tag>
         <el-tag v-else-if="isTeacher" type="warning" size="mini">老师</el-tag>
         <el-tag v-else-if="isStudent" type="primary" size="mini">学生</el-tag>
         <el-dropdown @command="handleUserCommand">
@@ -65,7 +60,7 @@
       </div>
     </div>
 
-    <!-- 发布活动对话框（和参考代码完全一致） -->
+    <!-- 发布活动对话框（保持不变） -->
     <el-dialog
       :title="dialogTitle"
       :visible.sync="dialogVisible"
@@ -160,15 +155,15 @@
 
 <script>
 import { mapState, mapActions, mapGetters } from "vuex";
-import { addActivity } from "@/api/activity";
-import { uploadFile } from "@/api/upload";
+import { addActivity } from "@/api/activity"; // 确保接口路径正确
+import { uploadFile } from "@/api/upload"; // 确保图片上传接口路径正确
 
 export default {
   name: "AppHeader",
   data() {
     return {
       searchKeyword: "",
-      // 弹窗相关数据（和参考代码完全一致）
+      // 弹窗相关数据
       dialogVisible: false,
       dialogTitle: "发布活动",
       activityForm: {
@@ -180,9 +175,9 @@ export default {
         endTime: "",
         status: 1,
         participants: [],
-        publisherId: "", // 发布人ID（业务扩展字段）
-        publisherName: "", // 发布人名称（业务扩展字段）
-        publisherRole: "", // 发布人角色（业务扩展字段）
+        publisherId: "", // 发布人ID
+        publisherName: "", // 发布人名称
+        publisherRole: "", // 发布人角色
       },
       activityRules: {
         name: [{ required: true, message: "请输入活动名称", trigger: "blur" }],
@@ -201,7 +196,7 @@ export default {
   },
   computed: {
     ...mapState("user", ["userInfo"]),
-    ...mapGetters("user", ["isAdmin", "isStudent"]),
+    ...mapGetters("user", ["isEmp", "isStudent"]),
     // 判断是否为老师
     isTeacher() {
       return this.userInfo.role === "teacher";
@@ -241,7 +236,6 @@ export default {
       }
     },
 
-    // ========== 以下方法和参考代码完全对齐 ==========
     // 1. 上传前校验
     beforeUpload(file) {
       const isImage = file.type.startsWith("image/");
@@ -262,27 +256,39 @@ export default {
           this.$message.error("上传失败：" + (res.msg || "未知错误"));
         }
       } catch (err) {
-        this.$message.error("上传失败：" + err.message);
+        this.$message.error("上传失败：" + (err.message || "网络错误"));
       }
     },
 
-    // 3. 打开发布弹窗
+    // 3. 打开发布弹窗（保持逻辑不变）
     handleAdd() {
       this.dialogTitle = "发布活动";
       this.dialogVisible = true;
+      // 重置表单（防止缓存上次数据）
+      this.$nextTick(() => {
+        if (this.$refs.activityForm) {
+          this.$refs.activityForm.resetFields();
+        }
+      });
     },
 
-    // 4. 提交表单
+    // 4. 提交表单（调用添加活动接口，核心确保接口调用）
     handleSubmit() {
       this.$refs.activityForm.validate(async (valid) => {
         if (valid) {
           try {
-            await addActivity(this.activityForm);
-            this.$message.success("新增成功");
-            this.dialogVisible = false;
-            this.getList(); // 通知刷新（如果需要）
+            // 调用添加活动接口
+            const res = await addActivity(this.activityForm);
+            if (res.code === 0) {
+              this.$message.success("活动发布成功！");
+              this.dialogVisible = false;
+              // 可选：刷新活动列表（如果需要）
+              this.$emit("refreshActivityList");
+            } else {
+              this.$message.error("发布失败：" + (res.msg || "接口返回错误"));
+            }
           } catch (error) {
-            console.error("提交失败:", error);
+            console.error("活动发布接口调用失败:", error);
             this.$message.error("发布失败：" + (error.message || "服务器错误"));
           }
         }
@@ -303,15 +309,10 @@ export default {
         endTime: "",
         status: 1,
         participants: [],
-        publisherId: this.userInfo.id,
-        publisherName: this.userInfo.userName,
-        publisherRole: this.userInfo.role,
+        publisherId: this.userInfo.id || "",
+        publisherName: this.userInfo.userName || "",
+        publisherRole: this.userInfo.role || "",
       };
-    },
-
-    // 6. 刷新列表（空方法，保持和参考代码结构一致）
-    getList() {
-      this.$emit("activityPublished"); // 通知父组件刷新
     },
   },
 };
@@ -348,14 +349,23 @@ export default {
 
 .nav li {
   margin: 0 20px;
+  cursor: pointer;
 }
 
-.nav .publish-btn-item {
-  margin: 0 10px;
+/* 新增：老师发布活动导航项样式（和普通导航一致） */
+.nav .publish-nav-item {
+  margin: 0 20px;
 }
-
-.nav .publish-btn-item .el-button {
-  padding: 6px 12px;
+.nav .publish-nav-item a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nav .publish-nav-item a:hover {
+  color: #409eff;
 }
 
 .nav a {

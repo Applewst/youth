@@ -13,7 +13,7 @@
         <el-form-item label="用户名">
           <el-input
             v-model="searchForm.name"
-            placeholder="请输入用户名"
+            placeholder="请输入姓名"
             clearable
             @keyup.enter="handleSearch"
           />
@@ -116,8 +116,8 @@
         <el-form-item label="用户名" prop="username">
           <el-input v-model="adminForm.username" placeholder="请输入用户名" />
         </el-form-item>
-        <el-form-item label="活动序号" prop="idNumber">
-          <el-input v-model="adminForm.idNumber" placeholder="请输入活动序号" />
+        <el-form-item label="身份证号" prop="idNumber">
+          <el-input v-model="adminForm.idNumber" placeholder="请输入身份证号" />
         </el-form-item>
         <el-form-item label="姓名" prop="name">
           <el-input v-model="adminForm.name" placeholder="请输入姓名" />
@@ -312,6 +312,8 @@ export default {
 
     // 获取管理员列表（分页）
     async getAdminList() {
+      console.log(123);
+
       this.loading = true;
       try {
         const response = await getAdminListApi({
@@ -319,6 +321,8 @@ export default {
           pageSize: this.pagination.pageSize,
           name: this.searchForm.name,
         });
+        console.log(response);
+
         const data = response && response.data ? response.data : response;
         const records = (data && (data.records || data.list)) || [];
 
