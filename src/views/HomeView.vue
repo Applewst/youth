@@ -179,7 +179,7 @@
               全部
             </el-tag>
             <el-tag
-              v-for="category in categories"
+              v-for="category in contentCategories"
               :key="category.id"
               :type="selectedCategoryId === category.id ? 'primary' : 'info'"
               :effect="selectedCategoryId === category.id ? 'dark' : 'plain'"
@@ -340,44 +340,12 @@ export default {
       dialogVisible: false,
       selectedActivity: {},
       selectedCategoryId: null,
-      categories: [],
+      bannerCategories: [], // banner左侧导航用的分类（getCategoryList(2)）
+      contentCategories: [], // 下方标签/活动展示用的分类（getCategoryList(1)）
       activities: [],
       allActivities: [],
 
-      packageList: [
-        {
-          id: 1,
-          categoryId: 101,
-          name: "新人专享套餐",
-          categoryName: "新人福利",
-          description: "新用户注册即可领取的专属套餐，包含50积分+优惠券",
-          image: "https://example.com/img1.png",
-          score: 50,
-          status: 1, // 1-启用 0-禁用
-          updateTime: "2025-12-01 10:20:30",
-          createTime: "2025-11-30 09:10:20",
-          activities: [
-            { id: 101, activityId: 1, packageId: 1 },
-            { id: 102, activityId: 2, packageId: 1 },
-          ],
-        },
-        {
-          id: 2,
-          categoryId: 102,
-          name: "月度会员套餐",
-          categoryName: "会员权益",
-          description: "月度会员专享，每月可领取100积分+专属折扣",
-          image: "https://example.com/img2.png",
-          score: 100,
-          status: 1,
-          updateTime: "2025-12-05 14:15:22",
-          createTime: "2025-12-01 10:00:00",
-          activities: [
-            { id: 201, activityId: 1, packageId: 2 },
-            { id: 202, activityId: 2, packageId: 2 },
-          ],
-        },
-      ], // 存储当前分类的套餐数据
+      packageList: [], // 存储当前分类的套餐数据
       packageActivityLoading: false,
       hoverCategoryId: null, // 当前悬浮的分类ID
       hoverCategoryTop: 0, // 弹窗顶部定位（对齐悬浮分类）
@@ -401,15 +369,25 @@ export default {
         )
         .slice(0, 4);
     },
+    // 下方展示的分类改为contentCategories
     displayCategories() {
       if (this.selectedCategoryId) {
-        return this.categories.filter((c) => c.id === this.selectedCategoryId);
+        return this.contentCategories.filter(
+          (c) => c.id === this.selectedCategoryId
+        );
       }
-      return this.categories;
+      console.log(this.contentCategories);
+
+      return this.contentCategories;
+    },
+    categories() {
+      return this.bannerCategories;
     },
   },
   created() {
-    this.loadCategories();
+    // 分别加载两类分类数据
+    this.loadBannerCategories(); // banner分类（参数2）
+    this.loadContentCategories(); // 内容分类（参数1）
     this.loadActivities();
   },
   mounted() {
@@ -459,16 +437,9 @@ export default {
       try {
         this.packageLoading = true;
         const response = await getCategoryPackage(categoryId);
-        if (response.code === 0) {
-          this.packageList = response.data;
-          this.$forceUpdate();
-        } else {
-          this.$message.error(response.msg || "加载套餐失败");
-          this.$nextTick(() => {
-            // 强制触发v-show重新计算
-            this.hoverCategoryId = categoryId;
-          });
-        }
+
+        this.packageList = response;
+        this.$forceUpdate();
 
         // 为每个套餐加载对应的活动列表
         const packageWithActivities = await Promise.all(
@@ -549,28 +520,90 @@ export default {
       });
     },
 
+    // 加载banner左侧导航分类（参数2）
+    async loadBannerCategories() {
+      try {
+        const response = await getCategoryList(2); // 明确传入参数2
+        console.log("banner分类数据（参数2）：", response);
+        // 兜底分类（适配参数2的场景）
+        this.bannerCategories =
+          response.length > 0
+            ? response
+            : [
+                { id: 101, name: "新人福利", type: "专属分类" },
+                { id: 102, name: "会员权益", type: "专属分类" },
+                { id: 103, name: "限时特惠", type: "专属分类" },
+              ];
+      } catch (error) {
+        console.error("加载banner分类失败:", error);
+        this.$message.error("加载分类失败，请稍后再试");
+        // 接口失败兜底
+        this.bannerCategories = [
+          { id: 101, name: "新人福利", type: "专属分类" },
+          { id: 102, name: "会员权益", type: "专属分类" },
+          { id: 103, name: "限时特惠", type: "专属分类" },
+        ];
+      }
+    },
+
+    // 加载下方内容分类（参数1）
+    async loadContentCategories() {
+      try {
+        const response = await getCategoryList(1); // 明确传入参数1
+        console.log("内容分类数据（参数1）：", response);
+        // 兜底分类（原有的通用分类）
+        this.contentCategories =
+          response.length > 0
+            ? response
+            : [
+                { id: 1, name: "/青年", type: "核心分类" },
+                { id: 2, name: "社会科学", type: "知识类" },
+                { id: 3, name: "思想成长", type: "成长类" },
+                { id: 4, name: "志愿活动", type: "实践类" },
+                { id: 5, name: "文体活动", type: "文体类" },
+                { id: 6, name: "技能特长", type: "技能类" },
+                { id: 7, name: "其他类", type: "通用类" },
+                { id: 8, name: "孝亲近老", type: "公益类" },
+                { id: 9, name: "实践实习", type: "实践类" },
+              ];
+      } catch (error) {
+        console.error("加载内容分类失败:", error);
+        this.$message.error("加载分类失败，请稍后再试");
+        // 接口失败兜底
+        this.contentCategories = [
+          { id: 1, name: "/青年", type: "核心分类" },
+          { id: 2, name: "社会科学", type: "知识类" },
+          { id: 3, name: "思想成长", type: "成长类" },
+          { id: 4, name: "志愿活动", type: "实践类" },
+          { id: 5, name: "文体活动", type: "文体类" },
+          { id: 6, name: "技能特长", type: "技能类" },
+          { id: 7, name: "其他类", type: "通用类" },
+          { id: 8, name: "孝亲近老", type: "公益类" },
+          { id: 9, name: "实践实习", type: "实践类" },
+        ];
+      }
+    },
+
     async loadCategories() {
       try {
         const response = await getCategoryList();
-        if (response.code === 0) {
-          // 可在这里补充默认分类（如果接口返回为空）
-          this.categories =
-            response.data.length > 0
-              ? response.data
-              : [
-                  { id: 1, name: "/青年", type: "核心分类" },
-                  { id: 2, name: "社会科学", type: "知识类" },
-                  { id: 3, name: "思想成长", type: "成长类" },
-                  { id: 4, name: "志愿活动", type: "实践类" },
-                  { id: 5, name: "文体活动", type: "文体类" },
-                  { id: 6, name: "技能特长", type: "技能类" },
-                  { id: 7, name: "其他类", type: "通用类" },
-                  { id: 8, name: "孝亲近老", type: "公益类" },
-                  { id: 9, name: "实践实习", type: "实践类" },
-                ];
-        } else {
-          this.$message.error(response.msg || "加载分类失败");
-        }
+        console.log(response);
+
+        // 可在这里补充默认分类（如果接口返回为空）
+        this.categories =
+          response.length > 0
+            ? response
+            : [
+                { id: 1, name: "/青年", type: "核心分类" },
+                { id: 2, name: "社会科学", type: "知识类" },
+                { id: 3, name: "思想成长", type: "成长类" },
+                { id: 4, name: "志愿活动", type: "实践类" },
+                { id: 5, name: "文体活动", type: "文体类" },
+                { id: 6, name: "技能特长", type: "技能类" },
+                { id: 7, name: "其他类", type: "通用类" },
+                { id: 8, name: "孝亲近老", type: "公益类" },
+                { id: 9, name: "实践实习", type: "实践类" },
+              ];
       } catch (error) {
         console.error("加载分类失败:", error);
         this.$message.error("加载分类失败，请稍后再试");
@@ -598,12 +631,9 @@ export default {
           status: this.selectedCategoryId ? undefined : 1,
           categoryId: this.selectedCategoryId,
         });
-        if (response.code === 0) {
-          this.allActivities = response.data.records;
-          this.activities = response.data.records;
-        } else {
-          this.$message.error(response.msg || "加载活动失败");
-        }
+
+        this.allActivities = response.records;
+        this.activities = response.records;
       } catch (error) {
         console.error("加载活动失败:", error);
         this.$message.error("加载活动失败，请稍后再试");
@@ -625,11 +655,10 @@ export default {
             pageSize: 100,
             name: this.searchKeyword,
           });
-          if (response.code === 0) {
-            this.activities = response.data.records;
-            this.allActivities = response.data.records;
-            this.$message.success(`找到 ${response.data.total} 个相关活动`);
-          }
+
+          this.activities = response.records;
+          this.allActivities = response.records;
+          this.$message.success(`找到 ${response.total} 个相关活动`);
         } catch (error) {
           this.$message.error("搜索失败");
         } finally {

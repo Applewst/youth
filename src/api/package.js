@@ -1,6 +1,7 @@
 import request from '@/utils/request';
+import { getFullApiPath } from '@/utils/requestPath';
 
-const MOCK_ENABLE = true;
+const MOCK_ENABLE = false;
 
 // 模拟基础数据列表
 const mockList = [
@@ -220,7 +221,7 @@ const realApi = {
   // 分页查询套餐
   getPackagePage: (params) => {
     return request({
-      url: '/admin/package/page',
+      url: getFullApiPath('/package/page'),
       method: 'GET',
       params,
     });
@@ -229,29 +230,29 @@ const realApi = {
   // 新增：真实接口-获取套餐详情
   getPackageDetail: (id) => {
     return request({
-      url: `/admin/package/${id}`, // 详情接口路径
+      url: getFullApiPath(`/package/${id}`), // 详情接口路径
       method: 'GET',
     });
   },
 
   // 新增套餐
   addPackage: (data) => {
-    return request({ url: '/admin/package/save', method: 'POST', data });
+    return request({ url: getFullApiPath('/package/save'), method: 'POST', data });
   },
 
   // 修改套餐
   updatePackage: (data) => {
-    return request({ url: '/admin/package', method: 'PUT', data });
+    return request({ url: getFullApiPath('/package'), method: 'PUT', data });
   },
 
   // 删除套餐（批量）
   deletePackage: (ids) => {
-    return request({ url: '/admin/package', method: 'DELETE' , params: { ids }});
+    return request({ url: getFullApiPath('/package'), method: 'DELETE' , params: { ids }});
   },
 
   // 切换套餐状态
   changePackageStatus: (id, status) => {
-    return request({ url: '/admin/package/status', method: 'PATCH', data: { id, status } });
+    return request({ url: getFullApiPath(`/package/status/${status}`), method: 'POST', data: { id, status } });
   }
 };
 
@@ -298,7 +299,7 @@ export function changePackageStatus(id, status) {
 //根据分类id查询套餐
 export function getCategoryPackage(categoryId) {
   return request({
-    url: '/user/package/list',
+    url: getFullApiPath('/package/list'),
     method: 'GET',
     params: { categoryId }
   });

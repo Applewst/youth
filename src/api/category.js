@@ -5,12 +5,12 @@
  * true: 使用本地模拟数据
  * false: 使用真实API接口
  */
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 
 // ==================== 导入依赖 ====================
 
 import  request  from "../utils/request"
-
+import { getFullApiPath } from '@/utils/requestPath';
 // ==================== 模拟数据 ====================
 
 /**
@@ -21,7 +21,7 @@ const mockCategoryList = [
   {
     id: 101,
     name: "周年庆典",
-    type: "线上活动",
+    type: 1,
     sort: 1,
     status: 1,
     createTime: "2024-01-15 10:30:00",
@@ -32,7 +32,7 @@ const mockCategoryList = [
   {
     id: 102,
     name: "新品发布会",
-    type: "线下活动",
+    type: 1,
     sort: 2,
     status: 1,
     createTime: "2024-01-15 10:35:00",
@@ -43,7 +43,7 @@ const mockCategoryList = [
   {
     id: 103,
     name: "粉丝见面会",
-    type: "混合活动",
+    type: 2,
     sort: 3,
     status: 1,
     createTime: "2024-01-16 11:20:00",
@@ -54,7 +54,7 @@ const mockCategoryList = [
   {
     id: 104,
     name: "线上直播",
-    type: "直播活动",
+    type: 2,
     sort: 4,
     status: 1,
     createTime: "2024-02-01 09:00:00",
@@ -65,7 +65,7 @@ const mockCategoryList = [
   {
     id: 105,
     name: "会员日活动",
-    type: "促销活动",
+    type: 1,
     sort: 5,
     status: 0,
     createTime: "2024-02-10 14:20:00",
@@ -76,7 +76,7 @@ const mockCategoryList = [
   {
     id: 106,
     name: "教育培训",
-    type: "培训活动",
+    type: 1,
     sort: 6,
     status: 1,
     createTime: "2024-02-15 10:00:00",
@@ -87,7 +87,7 @@ const mockCategoryList = [
   {
     id: 107,
     name: "抽奖活动",
-    type: "互动活动",
+    type: 2,
     sort: 7,
     status: 1,
     createTime: "2024-03-01 08:30:00",
@@ -126,7 +126,7 @@ export async function getCategoryList(type) {
     }
   } else {
     return request({
-      url: "/admin/category/list",
+      url: getFullApiPath("/category/list"),
       method: "get",
       params: { type },
     })
@@ -167,16 +167,14 @@ export async function getCategoryPage(params) {
     const records = filteredList.slice(start, end)
 
     return {
-      code: 0,
-      data: {
+      
         records,
         total: filteredList.length,
-      },
-      msg: "",
+      
     }
   } else {
     return request({
-      url: "/admin/category/page",
+      url: getFullApiPath("/category/page"),
       method: "get",
       params,
     })
@@ -220,7 +218,7 @@ export async function addCategory(data) {
     }
   } else {
     return request({
-      url: "/admin/category",
+      url: getFullApiPath("/category"),
       method: "post",
       data,
     })
@@ -264,7 +262,7 @@ export async function updateCategory(data) {
     }
   } else {
     return request({
-      url: "/admin/category",
+      url: getFullApiPath("/category"),
       method: "put",
       data,
     })
@@ -294,7 +292,7 @@ export async function deleteCategory(id) {
     }
   } else {
     return request({
-      url: "/admin/category",
+      url: "/teacher/category",
       method: "delete",
       params: { id },
     })
@@ -327,7 +325,7 @@ export async function updateCategoryStatus(id, status) {
   } else {
     const { status: statusValue, id: idValue } = { status, id }
     return request({
-      url: `/admin/category/status/${statusValue}`,
+      url: getFullApiPath(`/category/status/${statusValue}`),
       method: "post",
       params: { id: idValue },
     })

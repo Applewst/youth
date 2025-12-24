@@ -167,9 +167,8 @@ export default {
       this.categoryLoading = true;
       try {
         const res = await getCategoryList();
-        if (res.code === 0) {
-          this.categoryList = res.data;
-        }
+
+        this.categoryList = res;
       } catch (error) {
         console.error("加载分类列表失败:", error);
         this.$message.error("加载分类信息失败");
@@ -233,18 +232,14 @@ export default {
 
       this.joining = true;
       try {
-        const res = await joinActivity({
+        await joinActivity({
           activityId: this.activity.id,
           userId: this.$store.getters["user/userInfo"].id,
         });
 
-        if (res.code === 0) {
-          this.$message.success("成功参加活动！");
-          this.handleClose();
-          this.$emit("join", this.activity);
-        } else {
-          this.$message.error(res.msg || "参加活动失败");
-        }
+        this.$message.success("成功参加活动！");
+        this.handleClose();
+        this.$emit("join", this.activity);
       } catch (error) {
         console.error("参与活动失败:", error);
         this.$message.error("网络异常，参加活动失败，请稍后重试");

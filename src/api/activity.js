@@ -1,7 +1,8 @@
-import request from "../utils/request"
+import request from "@/utils/request"
+import { getFullApiPath } from '@/utils/requestPath';
 
 // 是否使用模拟数据（开发时设置为true，生产环境设置为false）
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 
 // 模拟数据
 const mockActivities = [
@@ -183,15 +184,15 @@ function mockGetActivityPage(params) {
       const end = start + pageSize
 
       resolve({
-        code: 0,
-        data: {
+        
+       
           records: filteredData.slice(start, end),
           total: total,
           size: pageSize,
           current: page,
           pages: Math.ceil(total / pageSize),
-        },
-        msg: "",
+        
+        
       })
     }, 300) // 模拟网络延迟
   })
@@ -309,7 +310,7 @@ export function getActivityPage(params) {
     return mockGetActivityPage(params)
   }
   return request({
-    url: "/admin/activity/page",
+    url: getFullApiPath("/activity/page"),
     method: "get",
     params,
   })
@@ -321,7 +322,7 @@ export function addActivity(data) {
     return mockAddActivity(data)
   }
   return request({
-    url: "/admin/activity",
+    url: getFullApiPath("/activity"),
     method: "post",
     data,
   })
@@ -333,7 +334,7 @@ export function updateActivity(data) {
     return mockUpdateActivity(data)
   }
   return request({
-    url: "/admin/activity",
+    url: getFullApiPath("/activity"),
     method: "put",
     data,
   })
@@ -345,7 +346,7 @@ export function deleteActivity(id) {
     return mockDeleteActivity(id)
   }
   return request({
-    url: `/admin/activity/${id}`,
+    url: getFullApiPath(`/activity/${id}`),
     method: "delete",
   })
 }
@@ -356,7 +357,7 @@ export function getActivityById(id) {
     return mockGetActivityById(id)
   }
   return request({
-    url: `/admin/activity/${id}`,
+    url: getFullApiPath(`/activity/${id}`),
     method: "get",
   })
 }
@@ -375,17 +376,17 @@ export async function joinActivity(data) {
 }
 
 //禁用活动
-export function disableActivity(id) {
+export function disableActivity(id,status) {
   return request({
-    url: `/admin/activity/end/${id}`,
+    url: getFullApiPath(`activity/status/${status}`),
     method: "post",
-    data: {id},
+    data: {id, status},
   })
 }
 
 export function makeUpActivity(id,status) {
   return request({
-    url: `/admin/activity/retroactive/${id}`,
+    url: getFullApiPath(`/activity/retroactive/${id}`),
     method: "post",
     data: { id ,status},
   })
@@ -393,7 +394,7 @@ export function makeUpActivity(id,status) {
 
 export function grantActivityPoints(id) {
   return request({
-    url: '/admin/activity/distribute',
+    url: getFullApiPath('/activity/distribute'),
     method: "post",
     data: { id },
   })
@@ -401,7 +402,7 @@ export function grantActivityPoints(id) {
 
 export function getRetroactivePage(params) {
   return request({
-    url: '/admin/activity/retroactivePage',
+    url: getFullApiPath('/activity/retroactivePage'),
     method: "get",
     params,
   })
@@ -410,7 +411,7 @@ export function getRetroactivePage(params) {
 //根据套餐id查询活动
 export function getPackageActivityById(packageId) {
   return request({
-    url: '/admin/activity/byPackage',
+    url: getFullApiPath(`/package/activity/${packageId}`),
     method: "get",
     params: { packageId },
   })

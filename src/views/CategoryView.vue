@@ -12,12 +12,16 @@
           />
         </el-form-item>
         <el-form-item label="活动类型">
-          <el-input
+          <!-- 搜索框改为下拉选择器 -->
+          <el-select
             v-model="searchForm.type"
-            placeholder="请输入活动类型"
+            placeholder="请选择活动类型"
             clearable
             @clear="handleSearch"
-          />
+          >
+            <el-option label="活动分类" :value="1" />
+            <el-option label="套餐分类" :value="2" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
@@ -29,7 +33,6 @@
       </el-button>
     </el-card>
 
-    <!-- 数据表格（删除status列） -->
     <el-card class="table-card" shadow="never">
       <el-table
         v-loading="loading"
@@ -38,25 +41,58 @@
         border
         style="width: 100%"
       >
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="活动分类名称" min-width="150" />
-        <el-table-column prop="type" label="活动类型" width="150" />
-        <el-table-column prop="sort" label="排序" width="100" />
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column prop="updateTime" label="更新时间" width="180" />
+        <el-table-column prop="id" label="ID" width="80">
+          <template slot-scope="{ row }">
+            {{ row.isEmpty ? " " : row.id }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="活动分类名称" min-width="150">
+          <template slot-scope="{ row }">
+            {{ row.isEmpty ? " " : row.name }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="type" label="活动类型" width="150">
+          <template slot-scope="{ row }">
+            <template v-if="!row.isEmpty">
+              <!-- 根据type值显示中文 -->
+              {{ row.type === 1 || row.type === "1" ? "活动分类" : "套餐分类" }}
+            </template>
+            <span v-else> </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sort" label="排序" width="100">
+          <template slot-scope="{ row }">
+            {{ row.isEmpty ? " " : row.sort }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180">
+          <template slot-scope="{ row }">
+            {{ row.isEmpty ? " " : row.createTime }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="updateTime" label="更新时间" width="180">
+          <template slot-scope="{ row }">
+            {{ row.isEmpty ? " " : row.updateTime }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template slot-scope="{ row }">
-            <el-button type="text" size="small" @click="handleEdit(row)">
-              编辑
-            </el-button>
-            <el-button
-              type="text"
-              size="small"
-              class="danger-btn"
-              @click="handleDelete(row)"
-            >
-              删除
-            </el-button>
+            <!-- 仅非空行显示操作按钮 -->
+            <template v-if="!row.isEmpty">
+              <el-button type="text" size="small" @click="handleEdit(row)">
+                编辑
+              </el-button>
+              <el-button
+                type="text"
+                size="small"
+                class="danger-btn"
+                @click="handleDelete(row)"
+              >
+                删除
+              </el-button>
+            </template>
+            <!-- 空行显示短横线 -->
+            <span v-else> </span>
           </template>
         </el-table-column>
       </el-table>
@@ -94,7 +130,15 @@
           />
         </el-form-item>
         <el-form-item label="活动类型" prop="type">
-          <el-input v-model="categoryForm.type" placeholder="请输入活动类型" />
+          <!-- 弹窗改为下拉选择器 -->
+          <el-select
+            v-model="categoryForm.type"
+            placeholder="请选择活动类型"
+            style="width: 100%"
+          >
+            <el-option label="活动分类" :value="1" />
+            <el-option label="套餐分类" :value="2" />
+          </el-select>
         </el-form-item>
         <el-form-item label="排序" prop="sort">
           <el-input-number v-model="categoryForm.sort" :min="0" :max="999" />
@@ -149,7 +193,7 @@ export default {
       categoryForm: {
         id: null,
         name: "",
-        type: "",
+        type: 1,
         sort: 0,
       },
 
@@ -157,7 +201,10 @@ export default {
         name: [
           { required: true, message: "请输入活动分类名称", trigger: "blur" },
         ],
-        type: [{ required: true, message: "请输入活动类型", trigger: "blur" }],
+        type: [
+          { required: true, message: "请选择活动类型", trigger: "change" },
+          { type: "number", message: "活动类型必须为数字", trigger: "change" },
+        ],
       },
     };
   },
@@ -170,25 +217,60 @@ export default {
     async fetchData() {
       this.loading = true;
       try {
-        // 构造请求参数（只传接口支持的name/type/page/pageSize）
         const params = {
           page: this.pagination.page,
           pageSize: this.pagination.pageSize,
           ...(this.searchForm.name && { name: this.searchForm.name }),
-          ...(this.searchForm.type && { type: this.searchForm.type }),
+          ...(this.searchForm.type !== "" && {
+            type: Number(this.searchForm.type),
+          }),
         };
 
         const res = await getCategoryPage(params);
         console.log(res);
 
-        // 修复接口返回处理逻辑（原逻辑写反）
+        // 1. 真实数据
+        const realTableData = res.records || [];
+        // 给真实数据标记非空
+        const realDataWithFlag = realTableData.map((item) => ({
+          ...item,
+          isEmpty: false, // 标记真实行
+        }));
 
-        this.tableData = res.records || [];
+        // 2. 计算需要补充的空行数量
+        const emptyRowCount =
+          this.pagination.pageSize - realDataWithFlag.length;
+        // 3. 生成空行（字段和真实数据一致，标记为空行）
+        const emptyRows = Array.from({ length: emptyRowCount }).map(
+          (_, index) => ({
+            id: `empty-${this.pagination.page}-${index}`, // 唯一key
+            name: "",
+            type: "",
+            sort: "",
+            createTime: "",
+            updateTime: "",
+            isEmpty: true, // 标记空行
+          })
+        );
+
+        // 4. 合并真实数据 + 空行
+        this.tableData = [...realDataWithFlag, ...emptyRows];
         this.pagination.total = res.total || 0;
       } catch (error) {
         console.error("fetchData error:", error);
         this.$message.error("获取数据失败");
-        this.tableData = [];
+        // 出错时也补充空行占位
+        this.tableData = Array.from({ length: this.pagination.pageSize }).map(
+          (_, index) => ({
+            id: `empty-error-${index}`,
+            name: "",
+            type: "",
+            sort: "",
+            createTime: "",
+            updateTime: "",
+            isEmpty: true,
+          })
+        );
         this.pagination.total = 0;
       } finally {
         this.loading = false;
@@ -210,7 +292,7 @@ export default {
     handleAdd() {
       this.dialogTitle = "新增活动分类";
       this.isEdit = false;
-      this.categoryForm = { id: null, name: "", type: "", sort: 0 };
+      this.categoryForm = { id: null, name: "", type: 1, sort: 0 };
       this.dialogVisible = true;
       this.$nextTick(() => {
         this.$refs.categoryForm && this.$refs.categoryForm.clearValidate();
@@ -220,7 +302,7 @@ export default {
     handleEdit(row) {
       this.dialogTitle = "编辑活动分类";
       this.isEdit = true;
-      this.categoryForm = { ...row };
+      this.categoryForm = { ...row, type: Number(row.type) };
       this.dialogVisible = true;
       this.$nextTick(() => {
         this.$refs.categoryForm && this.$refs.categoryForm.clearValidate();
@@ -233,8 +315,12 @@ export default {
 
         this.submitLoading = true;
         try {
+          const submitData = {
+            ...this.categoryForm,
+            type: Number(this.categoryForm.type),
+          };
           const apiFunc = this.isEdit ? updateCategory : addCategory;
-          const res = await apiFunc(this.categoryForm);
+          const res = await apiFunc(submitData);
 
           this.$message.success(
             res.msg || (this.isEdit ? "更新成功" : "新增成功")
@@ -305,5 +391,27 @@ export default {
 }
 .danger-btn {
   color: #f56c6c;
+}
+/* 新增：空行样式 */
+::v-deep .el-table .el-table__row td {
+  height: 50px; /* 固定行高，保证占位一致 */
+}
+
+/* 空行文字置灰 */
+::v-deep .el-table .el-table__row td:has(> span:only-child) {
+  color: #c0c4cc;
+}
+
+/* 空行hover无高亮，真实行保留高亮 */
+::v-deep .el-table .el-table__row:hover td {
+  background-color: inherit !important;
+}
+::v-deep .el-table .el-table__row:not(:has(> span:only-child)):hover td {
+  background-color: #f5f7fa !important;
+}
+
+/* 空行操作列背景轻微区分 */
+::v-deep .el-table .el-table__row td:last-child:has(> span:only-child) {
+  background-color: #fafafa;
 }
 </style>

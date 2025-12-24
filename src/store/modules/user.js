@@ -6,8 +6,9 @@ import {
 } from '@/api/auth'
 import wsClient from '@/utils/websocket';
 import router from '@/router/index.js';
+import {updateStudentInfo} from '@/api/user.js';
 
-// 辅助函数1：从JWT解析身份+ID（用于WS路径）
+// 辅助函数1：从JWT解析身份+ID（仅用于WS路径，不再解析name）
 const parseJwtForWsPath = (jwtPayload) => {
   if (!jwtPayload) return null;
 
@@ -33,27 +34,11 @@ const parseJwtForWsPath = (jwtPayload) => {
   return { identity, id: Number(userId) };
 };
 
-// 辅助函数2：从JWT解析用户信息（替代getUserInfo接口）
-const parseUserInfoFromJwt = (jwtPayload) => {
-  if (!jwtPayload) return null;
-
-  // 适配你的JWT字段（根据实际返回的字段调整）
-  return {
-    id: jwtPayload.id || jwtPayload.empId || jwtPayload.studentId || jwtPayload.teacherId || '',
-    name: jwtPayload.name || jwtPayload.nickname || jwtPayload.username || '',
-    userName: jwtPayload.userName || jwtPayload.username || '',
-    // 从xxxId反推身份，或用JWT中的role字段
-    role: jwtPayload.role || (() => {
-      const idFields = Object.keys(jwtPayload).filter(key => key.endsWith('Id'));
-      return idFields.length > 0 ? idFields[0].replace('Id', '') : 'student';
-    })()
-  };
-};
-
 const state = {
   token: localStorage.getItem('token') || '',
-  userInfo: { id: null, name: '', userName: '', role: 'emp' },
-  isLoggedIn: false,
+  // 从localStorage恢复用户信息（不再依赖JWT）
+  userInfo: JSON.parse(localStorage.getItem('userInfo')) || { id: null, name: '', userName: '', role: 'emp' },
+  isLoggedIn: !!localStorage.getItem('token'),
   wsConnected: false,
   jwtPayload: null,
   wsMessages: []
@@ -69,88 +54,116 @@ const getters = {
   isStudent: state => state.userInfo.role === 'student',
   isTeacher: state => state.userInfo.role === 'teacher',
   isEmp: state => state.userInfo.role === 'emp',
-  wsMessages: state => state.wsMessages
+  wsMessages: state => state.wsMessages,
+  pathPrefix: state => {
+    const role = state.userInfo.role?.toLowerCase() || 'emp';
+    // 身份→路径前缀映射（可根据后端实际路径调整）
+    const prefixMap = {
+      student: '/user',
+      teacher: '/teacher',
+      emp: '/admin',    // 员工/管理员统一用/admin前缀
+    };
+    // 兜底：默认返回/admin
+    return prefixMap[role] || '/admin';
+  }
 };
 
 const mutations = {
-
-ADD_WS_MESSAGE(state, message) {
+  ADD_WS_MESSAGE(state, message) {
     if (!state.wsMessages) state.wsMessages = [];
     state.wsMessages.push(message);
-    // 限制消息数量（避免内存溢出）
     if (state.wsMessages.length > 100) {
       state.wsMessages.shift();
     }
   },
 
-  SET_TOKEN(state, token) {
+  // 登录时存储token + 用户信息到localStorage
+  SET_LOGIN_INFO(state, { token, userInfo }) {
     state.token = token;
+    state.userInfo = userInfo;
+    state.isLoggedIn = true;
+    // 把用户信息存到localStorage（刷新后恢复）
     try {
       localStorage.setItem('token', token);
+      localStorage.setItem('userInfo', JSON.stringify(userInfo));
     } catch (e) {
-      console.error('localStorage存储token失败:', e);
+      console.error('localStorage存储失败:', e);
     }
-    // 解析JWT
+    // 仅解析JWT用于WS路径（不再解析name）
     try {
       const payload = token.split('.')[1];
-      state.jwtPayload = JSON.parse(decodeURIComponent(
-        atob(payload).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-      ));
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const paddedBase64 = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+      const decoded = decodeURIComponent(
+        atob(paddedBase64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      state.jwtPayload = JSON.parse(decoded);
     } catch (e) {
       state.jwtPayload = null;
-      console.error('JWT解析失败:', e);
+      console.error('JWT解析失败（仅影响WS）:', e);
     }
   },
-  SET_USER_INFO(state, userInfo) {
-    state.userInfo = {
-      id: userInfo.id,
-      name: userInfo.name,
-      userName: userInfo.userName,
-      role: userInfo.role || userInfo.identity || 'student'
-    };
-    state.isLoggedIn = true;
-  },
+
   CLEAR_USER_DATA(state) {
     state.token = '';
     state.userInfo = { id: null, name: '', userName: '', role: null };
     state.isLoggedIn = false;
     state.wsConnected = false;
     state.jwtPayload = null;
+    state.wsMessages = [];
+    // 清空localStorage
     try {
       localStorage.removeItem('token');
+      localStorage.removeItem('userInfo');
     } catch (e) {
-      console.error('localStorage移除token失败:', e);
+      console.error('localStorage移除失败:', e);
     }
   },
+
   SET_WS_CONNECTED(state, status) {
     state.wsConnected = status;
   }
 };
 
 const actions = {
+async updateUserInfo({ commit, state }, newInfo) {
+    try {
+      // 根据角色调用对应接口（这里以学生为例，可扩展教师/管理员）
+      let response;
+      if (state.userInfo.role === 'student') {
+        // 合并现有userInfo的id（避免前端传空）
+        const params = { ...state.userInfo, ...newInfo };
+        response = await updateStudentInfo(params);
+      }
+      // 可扩展：教师/管理员的接口调用逻辑
+      // else if (state.userInfo.role === 'teacher') { ... }
 
-registerWsMessageListener({ commit }) {
-    // 先移除旧监听（避免重复）
+      // 接口成功后，更新Store
+      commit('UPDATE_USER_INFO', newInfo);
+      return response;
+    } catch (error) {
+      console.error('更新用户信息失败:', error);
+      throw error; // 抛出错误，让组件处理提示
+    }
+  },
+
+  registerWsMessageListener({ commit }) {
     wsClient.offGlobalMessage(this.wsMessageHandler);
-    
-    // 定义监听回调
     this.wsMessageHandler = (message) => {
       console.log('收到后端推送消息:', message);
       commit('ADD_WS_MESSAGE', message);
-      // 可根据消息类型触发不同业务逻辑（如二课分提醒、活动审核通知）
       switch (message.type) {
-        case 'SCORE_REMIND': // 二课分提醒
-          // 触发全局通知（需引入Element UI的Message）
+        case 'SCORE_REMIND':
           window.$message?.warning(`【二课分提醒】${message.content}`);
           break;
-        case 'ACTIVITY_APPROVE': // 活动审核通知
+        case 'ACTIVITY_APPROVE':
           window.$message?.success(`【活动通知】${message.content}`);
           break;
-        // 其他消息类型...
       }
     };
-
-    // 注册监听
     wsClient.onGlobalMessage(this.wsMessageHandler);
   },
 
@@ -160,7 +173,6 @@ registerWsMessageListener({ commit }) {
     let response;
 
     try {
-      // 多身份登录接口映射
       switch (identity) {
         case 'student': response = await studentLogin(baseData); break;
         case 'teacher': response = await teacherLogin(baseData); break;
@@ -168,18 +180,22 @@ registerWsMessageListener({ commit }) {
         default: throw new Error(`未知身份：${identity}`);
       }
 
-      // 存储Token和用户信息
-      const resData = response.data || response;
-      commit('SET_TOKEN', resData.token);
-      commit('SET_USER_INFO', {
+      const resData = response || response;
+      console.log(resData);
+      
+      // 登录成功后，直接用接口返回的data作为userInfo
+      const userInfo = {
         id: resData.id,
-        name: resData.name,
-        userName: resData.userName,
-        role: resData.role || identity,
-        identity
+        name: resData.name, // 直接拿接口返回的name
+        userName: resData.userName, // 直接拿接口返回的userName
+        role: identity // 或用resData.data.role
+      };
+      // 存储token + 用户信息
+      commit('SET_LOGIN_INFO', {
+        token: resData.token,
+        userInfo: userInfo
       });
 
-      // 建立WS连接
       await dispatch('initWsConnectWithToken');
       return response;
     } catch (error) {
@@ -188,21 +204,16 @@ registerWsMessageListener({ commit }) {
     }
   },
 
-  // 核心：从JWT解析身份+ID，拼接WS路径
-  async initWsConnectWithToken({ commit, dispatch,state }) {
+  async initWsConnectWithToken({ commit, dispatch, state }) {
     try {
       if (!state.token || !state.jwtPayload) {
         throw new Error('Token/JWT缺失');
       }
-
-      // 从JWT提取身份+ID（如empId→emp_1）
       const wsPathInfo = parseJwtForWsPath(state.jwtPayload);
       if (!wsPathInfo) {
         throw new Error('JWT中无有效身份/ID');
       }
       const { identity, id } = wsPathInfo;
-
-      // 设置WS路径（如/ws/emp_1）
       wsClient.setWsUrlByIdentity(identity, id);
       await wsClient.connect();
       commit('SET_WS_CONNECTED', true);
@@ -211,25 +222,33 @@ registerWsMessageListener({ commit }) {
     } catch (error) {
       commit('SET_WS_CONNECTED', false);
       if (error.message.includes('401') || error.message.includes('过期')) {
-      commit('CLEAR_USER_DATA');
-      window.$message?.error('Token已过期，请重新登录');
-      // 跳转到登录页（需引入router）
-      router.push('/login');
-    }
+        commit('CLEAR_USER_DATA');
+        window.$message?.error('Token已过期，请重新登录');
+        router.push('/login');
+      }
       throw new Error(`WS连接失败：${error.message}`);
     }
   },
 
-  // 移除getUserInfo action（无该接口）
-  
   async logout({ commit }) {
     try {
-      wsClient.close();
-      await logoutUser();
+      if (wsClient) {
+        wsClient.close();
+        commit('SET_WS_CONNECTED', false);
+      }
+      const res = await logoutUser();
+      const resData = res.data || res;
+      if (resData.code === 1 || resData.success) {
+        window.$message?.success('退出登录成功');
+      } else {
+        window.$message?.error(`退出失败：${resData.msg || '接口返回错误'}`);
+      }
     } catch (error) {
-      console.error('登出失败:', error);
+      console.error('登出接口调用失败:', error);
+      window.$message?.warning('退出接口调用失败，已强制登出');
     } finally {
       commit('CLEAR_USER_DATA');
+      router.push('/login').catch(err => console.error('跳转登录页失败:', err));
     }
   },
   
@@ -238,32 +257,40 @@ registerWsMessageListener({ commit }) {
     commit('CLEAR_USER_DATA');
   },
 
-  async restoreLoginState({ commit, dispatch, state }) {
-    // 1. 从localStorage读取token
+  // 刷新恢复逻辑：直接从localStorage拿userInfo（不再依赖JWT解析name）
+  restoreLoginState({dispatch, state }) {
     const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      // 2. 存入token到Vuex（触发JWT解析）
-      commit('SET_TOKEN', token);
-
-      // 3. 从JWT Payload解析用户信息（核心改造）
-      const userInfo = parseUserInfoFromJwt(state.jwtPayload);
-      if (!userInfo) {
-        throw new Error('JWT中未解析出用户信息');
-      }
-      commit('SET_USER_INFO', userInfo);
-
-      // 4. 重新建立WS连接（可选）
-      await dispatch('initWsConnectWithToken');
-
-      console.log('✅ 刷新后恢复登录状态成功（从JWT解析）');
-    } catch (error) {
-      // 恢复失败（token过期/JWT解析失败）
-      commit('CLEAR_USER_DATA');
-      console.error('❌ 刷新后恢复登录状态失败:', error);
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!token || !userInfo) {
+      console.log('localStorage中无登录信息，无需恢复');
+      return;
     }
-  },
+    // 恢复状态
+    state.token = token;
+    state.userInfo = userInfo;
+    state.isLoggedIn = true;
+    // 解析JWT用于WS（仅WS需要）
+    try {
+      const payload = token.split('.')[1];
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const paddedBase64 = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+      const decoded = decodeURIComponent(
+        atob(paddedBase64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      state.jwtPayload = JSON.parse(decoded);
+      // 恢复WS连接
+      dispatch('initWsConnectWithToken').catch(wsError => {
+        console.warn('WS连接恢复失败（不影响登录状态）:', wsError);
+      });
+    } catch (e) {
+      state.jwtPayload = null;
+      console.error('JWT解析失败（仅影响WS）:', e);
+    }
+    console.log('✅ 刷新后恢复登录状态成功，用户信息:', userInfo);
+  }
 };
 
 export default {
